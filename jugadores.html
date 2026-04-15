@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscripción de Jugadores</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         h2 { color: #1a73e8; text-align: center; margin-top: 0; }
         .info-torneo { background: #e8f0fe; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; }
         form { display: flex; flex-direction: column; gap: 12px; }
-        input, button { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
-        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
+        label { font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: -8px; }
+        input, select, button { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:hover { background-color: #218838; }
         .lista { margin-top: 25px; border-top: 2px solid #eee; padding-top: 15px; }
-        .jugador-item { background: #f8f9fa; padding: 8px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 0.9em; }
+        .jugador-item { background: #f8f9fa; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #1a73e8; }
+        .nivel-badge { background: #1a73e8; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
         .error { color: red; text-align: center; font-weight: bold; }
     </style>
 </head>
@@ -22,25 +24,37 @@
 
 <div class="container">
     <div id="contenido">
-        <h2 id="titulo">Inscribir Jugador</h2>
+        <h2>Inscribir Jugador</h2>
         <div id="info" class="info-torneo">Cargando torneo...</div>
 
         <form id="form-jugador">
-            <input type="text" id="id_jugador" placeholder="ID Jugador (ej: J1)" required>
-            <input type="text" id="nombre_jugador" placeholder="Nombre Completo" required>
+            <label>ID Jugador:</label>
+            <input type="text" id="id_jugador" placeholder="Ej: J1" required>
+            
+            <label>Nombre Completo:</label>
+            <input type="text" id="nombre_jugador" placeholder="Nombre y Apellidos" required>
+            
+            <label>Nivel de Juego:</label>
+            <select id="nivel_jugador">
+                <option value="Principiante">Principiante</option>
+                <option value="Intermedio">Intermedio</option>
+                <option value="Avanzado">Avanzado</option>
+                <option value="Pro">Profesional</option>
+            </select>
+
             <button type="submit" id="btn-enviar">REGISTRAR JUGADOR</button>
         </form>
 
         <div class="lista">
-            <h3>Jugadores Inscritos</h3>
+            <h3>Inscritos actualmente</h3>
             <div id="lista-jugadores">Cargando lista...</div>
         </div>
     </div>
-    <div id="error-token" class="error" style="display:none">⚠️ Acceso no autorizado</div>
+    <div id="error-token" class="error" style="display:none">⚠️ Acceso no autorizado o ID de torneo faltante.</div>
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2cR6NSLbIkn-jFxwo69zTfrjomKPa7gD-udGPgTo84Wd5jwAV_xbxfboN74oEHYn7cw/exec";
+    const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUÍ"; // REEMPLAZA ESTO
     const TOKEN_VALIDO = "torneos_jigg";
 
     const params = new URLSearchParams(window.location.search);
@@ -51,11 +65,10 @@
         document.getElementById('contenido').style.display = 'none';
         document.getElementById('error-token').style.display = 'block';
     } else {
-        document.getElementById('info').innerText = "Torneo: " + idTorneo;
+        document.getElementById('info').innerText = "Torneo ID: " + idTorneo;
         cargarLista();
     }
 
-    // Registrar jugador
     document.getElementById('form-jugador').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
@@ -63,26 +76,27 @@
 
         const idJ = document.getElementById('id_jugador').value.trim();
         const nomJ = document.getElementById('nombre_jugador').value.trim();
+        const nivelJ = document.getElementById('nivel_jugador').value;
 
-        const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=write&id_torneo=${idTorneo}&id_jugador=${encodeURIComponent(idJ)}&nombre_jugador=${encodeURIComponent(nomJ)}`;
+        // Añadimos &nivel= a la URL
+        const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=write&id_torneo=${idTorneo}&id_jugador=${encodeURIComponent(idJ)}&nombre_jugador=${encodeURIComponent(nomJ)}&nivel=${encodeURIComponent(nivelJ)}`;
 
         try {
             const res = await fetch(url);
             const data = await res.json();
             if (data.result === "ok") {
-                alert("¡Jugador registrado!");
+                alert(data.mensaje);
                 document.getElementById('id_jugador').value = "";
                 document.getElementById('nombre_jugador').value = "";
                 cargarLista();
             }
         } catch (err) {
-            alert("Error al conectar");
+            alert("Error de conexión");
         } finally {
             btn.disabled = false;
         }
     });
 
-    // Cargar lista usando la acción 'read' que programamos
     async function cargarLista() {
         const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`;
         try {
@@ -93,13 +107,21 @@
 
             if (data.datos && data.datos.length > 0) {
                 data.datos.forEach(j => {
-                    contenedor.innerHTML += `<div class="jugador-item"><span>${j.id_jugador}</span> <strong>${j.nombre_jugador}</strong></div>`;
+                    // Mostramos también el nivel en la lista
+                    contenedor.innerHTML += `
+                        <div class="jugador-item">
+                            <div>
+                                <small>${j.id_jugador}</small><br>
+                                <strong>${j.nombre_jugador}</strong>
+                            </div>
+                            <span class="nivel-badge">${j.nivel || 'N/A'}</span>
+                        </div>`;
                 });
             } else {
-                contenedor.innerHTML = "No hay jugadores aún.";
+                contenedor.innerHTML = "<p style='text-align:center; color:#999;'>No hay jugadores inscritos.</p>";
             }
         } catch (err) {
-            document.getElementById('lista-jugadores').innerHTML = "Error al cargar lista.";
+            contenedor.innerHTML = "Error al cargar lista.";
         }
     }
 </script>
