@@ -8,16 +8,25 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         h2 { color: #1a73e8; text-align: center; margin-top: 0; }
-        .info-torneo { background: #e8f0fe; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; }
+        
+        .info-torneo { background: #e8f0fe; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 0.9em; }
+        
         form { display: flex; flex-direction: column; gap: 12px; }
         label { font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: -8px; }
+        
         input, select, button { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
-        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        /* Estilo para el ID automático (bloqueado) */
+        input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold; border: 1px solid #ced4da; }
+
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background-color: #218838; }
+        button:disabled { background-color: #ccc; cursor: wait; }
+
         .lista { margin-top: 25px; border-top: 2px solid #eee; padding-top: 15px; }
         .jugador-item { background: #f8f9fa; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #1a73e8; }
         .nivel-badge { background: #1a73e8; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
-        .error { color: red; text-align: center; font-weight: bold; }
+        .error { color: red; text-align: center; font-weight: bold; padding: 20px; }
     </style>
 </head>
 <body>
@@ -25,105 +34,140 @@
 <div class="container">
     <div id="contenido">
         <h2>Inscribir Jugador</h2>
-        <div id="info" class="info-torneo">Cargando torneo...</div>
+        <div id="info" class="info-torneo">Cargando datos del torneo...</div>
 
         <form id="form-jugador">
-            <label>ID Jugador:</label>
-            <input type="text" id="id_jugador" placeholder="Ej: J1" required>
+            <label>ID Jugador (Asignado automáticamente):</label>
+            <input type="text" id="id_jugador" readonly value="Cargando...">
             
             <label>Nombre Completo:</label>
-            <input type="text" id="nombre_jugador" placeholder="Nombre y Apellidos" required>
+            <input type="text" id="nombre_jugador" placeholder="Ej: Juan Pérez" required>
             
-            <label>Nivel de Juego:</label>
+            <label>Nivel:</label>
             <select id="nivel_jugador">
                 <option value="Principiante">Principiante</option>
                 <option value="Intermedio">Intermedio</option>
                 <option value="Avanzado">Avanzado</option>
-                <option value="Pro">Profesional</option>
+                <option value="Pro">Pro</option>
             </select>
 
-            <button type="submit" id="btn-enviar">REGISTRAR JUGADOR</button>
+            <button type="submit" id="btn-enviar">CONFIRMAR INSCRIPCIÓN</button>
         </form>
 
         <div class="lista">
-            <h3>Inscritos actualmente</h3>
+            <h3>Jugadores Inscritos</h3>
             <div id="lista-jugadores">Cargando lista...</div>
         </div>
     </div>
-    <div id="error-token" class="error" style="display:none">⚠️ Acceso no autorizado o ID de torneo faltante.</div>
+    <div id="error-token" class="error" style="display:none">
+        ⚠️ Acceso Denegado. Token o ID de Torneo inválidos.
+    </div>
 </div>
 
 <script>
-    const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUÍ"; // REEMPLAZA ESTO
-    const TOKEN_VALIDO = "torneos_jigg";
+    // --- CONFIGURACIÓN ---
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2cR6NSLbIkn-jFxwo69zTfrjomKPa7gD-udGPgTo84Wd5jwAV_xbxfboN74oEHYn7cw/exec";
+    const TOKEN_VALIDO = "torneos_jigg"; // Nota: Aquí podrías usar hash si lo prefieres
 
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const idTorneo = params.get('id_torneo');
 
+    const inputId = document.getElementById('id_jugador');
+    const btnEnviar = document.getElementById('btn-enviar');
+
+    // 1. Validar acceso
     if (token !== TOKEN_VALIDO || !idTorneo) {
         document.getElementById('contenido').style.display = 'none';
         document.getElementById('error-token').style.display = 'block';
     } else {
         document.getElementById('info').innerText = "Torneo ID: " + idTorneo;
-        cargarLista();
+        actualizarVista();
     }
 
-    document.getElementById('form-jugador').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('btn-enviar');
-        btn.disabled = true;
+    // 2. Función para cargar lista y calcular el siguiente ID
+    async function actualizarVista() {
+        inputId.value = "Calculando...";
+        btnEnviar.disabled = true;
 
-        const idJ = document.getElementById('id_jugador').value.trim();
-        const nomJ = document.getElementById('nombre_jugador').value.trim();
-        const nivelJ = document.getElementById('nivel_jugador').value;
-
-        // Añadimos &nivel= a la URL
-        const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=write&id_torneo=${idTorneo}&id_jugador=${encodeURIComponent(idJ)}&nombre_jugador=${encodeURIComponent(nomJ)}&nivel=${encodeURIComponent(nivelJ)}`;
-
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            if (data.result === "ok") {
-                alert(data.mensaje);
-                document.getElementById('id_jugador').value = "";
-                document.getElementById('nombre_jugador').value = "";
-                cargarLista();
-            }
-        } catch (err) {
-            alert("Error de conexión");
-        } finally {
-            btn.disabled = false;
-        }
-    });
-
-    async function cargarLista() {
         const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`;
+        
         try {
             const res = await fetch(url);
             const data = await res.json();
+            
             const contenedor = document.getElementById('lista-jugadores');
             contenedor.innerHTML = "";
 
+            let maxId = 0;
+
             if (data.datos && data.datos.length > 0) {
                 data.datos.forEach(j => {
-                    // Mostramos también el nivel en la lista
+                    // Calcular el ID más alto
+                    const idActual = parseInt(j.id_jugador);
+                    if (idActual > maxId) maxId = idActual;
+
+                    // Dibujar lista
                     contenedor.innerHTML += `
                         <div class="jugador-item">
-                            <div>
-                                <small>${j.id_jugador}</small><br>
-                                <strong>${j.nombre_jugador}</strong>
-                            </div>
+                            <div><small>#${j.id_jugador}</small> <strong>${j.nombre_jugador}</strong></div>
                             <span class="nivel-badge">${j.nivel || 'N/A'}</span>
                         </div>`;
                 });
             } else {
-                contenedor.innerHTML = "<p style='text-align:center; color:#999;'>No hay jugadores inscritos.</p>";
+                contenedor.innerHTML = "<p style='color:#999; text-align:center;'>No hay jugadores inscritos.</p>";
             }
+
+            // Asignar el siguiente ID
+            inputId.value = maxId + 1;
+            btnEnviar.disabled = false;
+
         } catch (err) {
-            contenedor.innerHTML = "Error al cargar lista.";
+            console.error(err);
+            document.getElementById('lista-jugadores').innerHTML = "Error al conectar con el servidor.";
         }
     }
+
+    // 3. Manejo del Envío
+    document.getElementById('form-jugador').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        btnEnviar.disabled = true;
+        btnEnviar.innerText = "Registrando...";
+
+        const idJ = inputId.value;
+        const nomJ = document.getElementById('nombre_jugador').value.trim();
+        const nivelJ = document.getElementById('nivel_jugador').value;
+
+        const urlParams = new URLSearchParams({
+            token: token,
+            hoja: "jugadores",
+            action: "write",
+            id_torneo: idTorneo,
+            id_jugador: idJ,
+            nombre_jugador: nomJ,
+            nivel: nivelJ
+        });
+
+        try {
+            const res = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
+            const data = await res.json();
+
+            if (data.result === "ok") {
+                alert("¡Inscripción exitosa! Tu número de jugador es: " + idJ);
+                document.getElementById('nombre_jugador').value = "";
+                // Recargar lista e ID
+                await actualizarVista();
+            } else {
+                alert("Error: " + data.error);
+            }
+        } catch (err) {
+            alert("Error de conexión al guardar.");
+        } finally {
+            btnEnviar.disabled = false;
+            btnEnviar.innerText = "CONFIRMAR INSCRIPCIÓN";
+        }
+    });
 </script>
 </body>
 </html>
