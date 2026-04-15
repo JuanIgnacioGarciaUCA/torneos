@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados de Partidos</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { color: #d93025; text-align: center; }
+        .info-torneo { background: #feede8; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; }
+        form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .full { grid-column: span 2; }
+        label { font-size: 0.8em; font-weight: bold; color: #666; }
+        input, select, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        button { background-color: #d93025; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background-color: #b3261e; }
+        .games { display: flex; justify-content: space-between; gap: 5px; }
+        .games input { width: 40px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="contenido">
+        <h2>Registrar Resultado</h2>
+        <div id="info" class="info-torneo">Torneo: ...</div>
+
+        <form id="form-partido">
+            <div class="full">
+                <label>ID Partido:</label>
+                <input type="text" id="id_partido" placeholder="P01, P02..." required>
+            </div>
+            <div>
+                <label>Tipo Partido:</label>
+                <select id="tipo_partido">
+                    <option value="Grupo">Grupo</option>
+                    <option value="Final">Final</option>
+                    <option value="Semis">Semis</option>
+                </select>
+            </div>
+            <div></div> <!-- Espacio -->
+            
+            <div>
+                <label>ID Jugador 1:</label>
+                <input type="text" id="id_j1" required>
+            </div>
+            <div>
+                <label>ID Jugador 2:</label>
+                <input type="text" id="id_j2" required>
+            </div>
+
+            <div class="full">
+                <label>Puntos por Game (G1 a G5):</label>
+                <div class="games">
+                    <input type="number" id="g1" value="0">
+                    <input type="number" id="g2" value="0">
+                    <input type="number" id="g3" value="0">
+                    <input type="number" id="g4" value="0">
+                    <input type="number" id="g5" value="0">
+                </div>
+            </div>
+
+            <button type="submit" id="btn-enviar" class="full">GUARDAR RESULTADO</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUÍ";
+    const TOKEN_VALIDO = "torneos_jigg";
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const idTorneo = params.get('id_torneo');
+
+    if (token === TOKEN_VALIDO && idTorneo) {
+        document.getElementById('info').innerText = "Torneo: " + idTorneo;
+    } else {
+        document.body.innerHTML = "<h1>No autorizado</h1>";
+    }
+
+    document.getElementById('form-partido').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-enviar');
+        btn.disabled = true;
+
+        const idP = document.getElementById('id_partido').value;
+        const tipo = document.getElementById('tipo_partido').value;
+        const j1 = document.getElementById('id_j1').value;
+        const j2 = document.getElementById('id_j2').value;
+        const gs = [
+            document.getElementById('g1').value,
+            document.getElementById('g2').value,
+            document.getElementById('g3').value,
+            document.getElementById('g4').value,
+            document.getElementById('g5').value
+        ];
+
+        const query = `?token=${token}&hoja=lista_partidos&action=write&id_torneo=${idTorneo}&id_partido=${idP}&tipo_partido=${tipo}&id_jugador1=${j1}&id_jugador2=${j2}&g1=${gs[0]}&g2=${gs[1]}&g3=${gs[2]}&g4=${gs[3]}&g5=${gs[4]}`;
+
+        try {
+            const res = await fetch(SCRIPT_URL + query);
+            const data = await res.json();
+            if (data.result === "ok") {
+                alert("Resultado actualizado");
+                document.getElementById('form-partido').reset();
+            }
+        } catch (err) {
+            alert("Error al enviar");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
