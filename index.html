@@ -3,173 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Torneos</title>
+    <title>Inscripción de Jugadores</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { color: #1a73e8; text-align: center; }
-        .error { color: #d93025; background: #fce8e6; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; }
-        .hidden { display: none; }
-        
-        form { display: flex; flex-direction: column; gap: 15px; }
-        label { font-weight: bold; margin-bottom: -10px; font-size: 0.9em; color: #555; }
-        input, select, button { padding: 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 1em; }
-        
-        /* Estilo para el campo de ID que no se puede editar */
-        input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; border: 1px solid #ced4da; font-family: monospace; font-weight: bold; }
-
-        button { background-color: #1a73e8; color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.3s; }
-        button:hover { background-color: #1557b0; }
-        button:disabled { background-color: #ccc; }
-
-        .qr-container { text-align: center; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .qr-card { background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
-        .qr-card img { width: 100%; max-width: 150px; margin-bottom: 10px; }
-        .qr-card p { font-size: 0.85em; font-weight: bold; color: #333; margin: 0; }
-        .btn-nueva { margin-top: 25px; width: 100%; background-color: #5f6368; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { color: #1a73e8; text-align: center; margin-top: 0; }
+        .info-torneo { background: #e8f0fe; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; }
+        form { display: flex; flex-direction: column; gap: 12px; }
+        label { font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: -8px; }
+        input, select, button { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background-color: #218838; }
+        .lista { margin-top: 25px; border-top: 2px solid #eee; padding-top: 15px; }
+        .jugador-item { background: #f8f9fa; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #1a73e8; }
+        .nivel-badge { background: #1a73e8; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+        .error { color: red; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="error-token" class="error hidden">
-        ⚠️ Acceso Denegado: Token inválido.
-    </div>
+    <div id="contenido">
+        <h2>Inscribir Jugador</h2>
+        <div id="info" class="info-torneo">Cargando torneo...</div>
 
-    <div id="seccion-crear" class="hidden">
-        <h2>Crear Torneo</h2>
-        <form id="form-torneo">
-            <label>ID del Torneo (Generado automáticamente):</label>
-            <!-- Atributo readonly para que no se pueda modificar -->
-            <input type="text" id="id_torneo" readonly>
+        <form id="form-jugador">
+            <label>ID Jugador:</label>
+            <input type="text" id="id_jugador" placeholder="Ej: J1" required>
             
-            <label>Nombre del Torneo:</label>
-            <input type="text" id="nombre_torneo" placeholder="Ej: I Open Tenis Mesa" required>
+            <label>Nombre Completo:</label>
+            <input type="text" id="nombre_jugador" placeholder="Nombre y Apellidos" required>
             
-            <label>Fecha y Hora:</label>
-            <input type="datetime-local" id="fechahora_torneo" required>
-            
-            <label>Tipo:</label>
-            <select id="tipo_torneo">
-                <option value="Grupos">Grupos + Eliminatoria</option>
-                <option value="Eliminatoria">Eliminatoria Directa</option>
-                <option value="Liga">Liga (Todos contra todos)</option>
+            <label>Nivel de Juego:</label>
+            <select id="nivel_jugador">
+                <option value="Principiante">Principiante</option>
+                <option value="Intermedio">Intermedio</option>
+                <option value="Avanzado">Avanzado</option>
+                <option value="Pro">Profesional</option>
             </select>
-            
-            <label>Máx. Grupos / Mesas:</label>
-            <input type="number" id="max_num_grupos" value="1" min="1">
-            
-            <button type="submit" id="btn-enviar">CREAR Y GENERAR QRs</button>
+
+            <button type="submit" id="btn-enviar">REGISTRAR JUGADOR</button>
         </form>
-    </div>
 
-    <div id="seccion-exito" class="hidden">
-        <h2 style="color: #188038;">✅ Torneo Registrado</h2>
-        <p style="text-align: center; color: #666;">ID: <span id="display-id" style="font-weight:bold;"></span></p>
-        
-        <div class="qr-container">
-            <div class="qr-card">
-                <div id="qr-jugadores"></div>
-                <p>Añadir Jugadores</p>
-            </div>
-            <div class="qr-card">
-                <div id="qr-partidos"></div>
-                <p>Resultados Partidos</p>
-            </div>
+        <div class="lista">
+            <h3>Inscritos actualmente</h3>
+            <div id="lista-jugadores">Cargando lista...</div>
         </div>
-
-        <button class="btn-nueva" onclick="location.reload()">Crear otro torneo</button>
     </div>
+    <div id="error-token" class="error" style="display:none">⚠️ Acceso no autorizado o ID de torneo faltante.</div>
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
-    const HASH_ALMACENADO = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2cR6NSLbIkn-jFxwo69zTfrjomKPa7gD-udGPgTo84Wd5jwAV_xbxfboN74oEHYn7cw/exec"; // REEMPLAZA ESTO
+    const TOKEN_VALIDO = "torneos_jigg";
 
     const params = new URLSearchParams(window.location.search);
-    const tokenRecibido = params.get('token') || "";
+    const token = params.get('token');
+    const idTorneo = params.get('id_torneo');
 
-    // --- FUNCIÓN PARA GENERAR ID ALEATORIO ---
-    function generarID(longitud) {
-        const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let resultado = '';
-        for (let i = 0; i < longitud; i++) {
-            resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-        }
-        return resultado;
+    if (token !== TOKEN_VALIDO || !idTorneo) {
+        document.getElementById('contenido').style.display = 'none';
+        document.getElementById('error-token').style.display = 'block';
+    } else {
+        document.getElementById('info').innerText = "Torneo ID: " + idTorneo;
+        cargarLista();
     }
 
-    async function calcularHash(texto) {
-        const msgUint8 = new TextEncoder().encode(texto);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function validarAcceso() {
-        const hashRecibido = await calcularHash(tokenRecibido);
-        
-        if (hashRecibido === HASH_ALMACENADO) {
-            document.getElementById('seccion-crear').classList.remove('hidden');
-            // Generamos y asignamos el ID al cargar la sección
-            document.getElementById('id_torneo').value = generarID(10);
-        } else {
-            document.getElementById('error-token').classList.remove('hidden');
-        }
-    }
-
-    validarAcceso();
-
-    const form = document.getElementById('form-torneo');
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('form-jugador').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
         btn.disabled = true;
-        btn.innerText = "Guardando en la nube...";
 
-        const idT = document.getElementById('id_torneo').value;
-        const nombre = document.getElementById('nombre_torneo').value;
-        const fecha = document.getElementById('fechahora_torneo').value;
-        const tipo = document.getElementById('tipo_torneo').value;
-        const max = document.getElementById('max_num_grupos').value;
+        const idJ = document.getElementById('id_jugador').value.trim();
+        const nomJ = document.getElementById('nombre_jugador').value.trim();
+        const nivelJ = document.getElementById('nivel_jugador').value;
 
-        const query = `?token=${encodeURIComponent(tokenRecibido)}&hoja=listatorneos&action=write&id_torneo=${idT}&nombre_torneo=${encodeURIComponent(nombre)}&fechahora_torneo=${encodeURIComponent(fecha)}&tipo_torneo=${encodeURIComponent(tipo)}&max_num_grupos=${max}`;
+        // Añadimos &nivel= a la URL
+        const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=write&id_torneo=${idTorneo}&id_jugador=${encodeURIComponent(idJ)}&nombre_jugador=${encodeURIComponent(nomJ)}&nivel=${encodeURIComponent(nivelJ)}`;
 
         try {
-            const response = await fetch(SCRIPT_URL + query);
-            const res = await response.json();
-
-            if (res.result === "ok") {
-                document.getElementById('display-id').innerText = idT;
-                mostrarQRs(idT);
-            } else {
-                alert("Error: " + res.error);
-                btn.disabled = false;
-                btn.innerText = "CREAR Y GENERAR QRs";
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.result === "ok") {
+                alert(data.mensaje);
+                document.getElementById('id_jugador').value = "";
+                document.getElementById('nombre_jugador').value = "";
+                cargarLista();
             }
         } catch (err) {
-            alert("Error de conexión con el servidor.");
+            alert("Error de conexión");
+        } finally {
             btn.disabled = false;
         }
     });
 
-    function mostrarQRs(idT) {
-        document.getElementById('seccion-crear').classList.add('hidden');
-        document.getElementById('seccion-exito').classList.remove('hidden');
+    async function cargarLista() {
+        const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const contenedor = document.getElementById('lista-jugadores');
+            contenedor.innerHTML = "";
 
-        const baseURL = window.location.href.split('?')[0].replace('index.html', '');
-        const urlJugadores = `${baseURL}jugadores.html?token=${encodeURIComponent(tokenRecibido)}&id_torneo=${idT}`;
-        const urlPartidos = `${baseURL}partidos.html?token=${encodeURIComponent(tokenRecibido)}&id_torneo=${idT}`;
-
-        document.getElementById('qr-jugadores').innerHTML = `
-            <a href="${urlJugadores}" target="_blank">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlJugadores)}" alt="QR Jugadores">
-            </a>`;
-        
-        document.getElementById('qr-partidos').innerHTML = `
-            <a href="${urlPartidos}" target="_blank">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlPartidos)}" alt="QR Partidos">
-            </a>`;
+            if (data.datos && data.datos.length > 0) {
+                data.datos.forEach(j => {
+                    // Mostramos también el nivel en la lista
+                    contenedor.innerHTML += `
+                        <div class="jugador-item">
+                            <div>
+                                <small>${j.id_jugador}</small><br>
+                                <strong>${j.nombre_jugador}</strong>
+                            </div>
+                            <span class="nivel-badge">${j.nivel || 'N/A'}</span>
+                        </div>`;
+                });
+            } else {
+                contenedor.innerHTML = "<p style='text-align:center; color:#999;'>No hay jugadores inscritos.</p>";
+            }
+        } catch (err) {
+            contenedor.innerHTML = "Error al cargar lista.";
+        }
     }
 </script>
 </body>
