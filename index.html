@@ -84,14 +84,28 @@
 
 <script>
     // --- CONFIGURACIÓN ---
-    const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUÍ"; // <--- PEGA TU URL /exec AQUÍ
-    const TOKEN_VALIDO = "torneos_jigg";
-
     const params = new URLSearchParams(window.location.search);
-    const tokenRecibido = params.get('token');
+    var tokenRecibido = params.get('token');
+
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec"; // <--- PEGA TU URL /exec AQUÍ
+
+    var HASH_ALMACENADO = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+  
+    var tokenRecibido = e.parameter.token; // El token que viene en la URL
+  
+    // Función para calcular Hash en Google Script
+    var hashRecibido = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, tokenRecibido)
+                      .map(function(byte) {
+                        return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+                      }).join('');
+
+    if (hashRecibido !== HASH_ALMACENADO) {
+        return response({ error: "No autorizado-"+hashRecibido });
+    }
+
 
     // Validación inicial
-    if (tokenRecibido !== TOKEN_VALIDO) {
+    if (hashRecibido !== HASH_ALMACENADO) {
         document.getElementById('seccion-crear').classList.add('hidden');
         document.getElementById('error-token').classList.remove('hidden');
     }
