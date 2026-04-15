@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Torneos</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background-color: #f4f4f9; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .error { color: red; font-weight: bold; text-align: center; }
+        .hidden { display: none; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        input, select, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        #mensaje { margin-top: 15px; padding: 10px; border-radius: 4px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Mensaje de Error de Token -->
+    <div id="error-token" class="error hidden">
+        ❌ Token inválido o no suministrado. Acceso denegado.
+    </div>
+
+    <!-- Sección Crear Torneo -->
+    <div id="seccion-crear" class="hidden">
+        <h2>Crear Nuevo Torneo</h2>
+        <form id="form-torneo">
+            <label>ID Torneo:</label>
+            <input type="text" id="id_torneo" placeholder="Ej: T2024" required>
+            
+            <label>Nombre del Torneo:</label>
+            <input type="text" id="nombre_torneo" placeholder="Ej: Open Verano" required>
+            
+            <label>Fecha y Hora:</label>
+            <input type="datetime-local" id="fechahora_torneo" required>
+            
+            <label>Tipo de Torneo:</label>
+            <select id="tipo_torneo">
+                <option value="Grupos">Grupos</option>
+                <option value="Eliminatoria">Eliminatoria</option>
+                <option value="Liga">Liga</option>
+            </select>
+            
+            <label>Máx. Grupos:</label>
+            <input type="number" id="max_num_grupos" value="1" min="1">
+            
+            <button type="submit" id="btn-enviar">Crear Torneo</button>
+        </form>
+        <div id="mensaje"></div>
+    </div>
+</div>
+
+<script>
+    // --- CONFIGURACIÓN ---
+    const SCRIPT_URL = "TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUÍ"; // <--- PEGA TU URL DE GOOGLE AQUÍ
+    const TOKEN_VALIDO = "torneos_jigg";
+
+    // 1. Obtener parámetros de la URL
+    const params = new URLSearchParams(window.location.search);
+    const tokenRecibido = params.get('token');
+
+    const divError = document.getElementById('error-token');
+    const divCrear = document.getElementById('seccion-crear');
+    const form = document.getElementById('form-torneo');
+    const mensajeDiv = document.getElementById('mensaje');
+
+    // 2. Validación de Seguridad
+    if (tokenRecibido !== TOKEN_VALIDO) {
+        divError.classList.remove('hidden');
+    } else {
+        // Token correcto: Mostrar formulario
+        divCrear.classList.remove('hidden');
+    }
+
+    // 3. Manejo del envío del formulario
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btn-enviar');
+        btn.disabled = true;
+        btn.innerText = "Enviando...";
+        mensajeDiv.innerText = "Procesando...";
+        mensajeDiv.style.backgroundColor = "#eee";
+
+        // Capturar datos del formulario
+        const id_t = document.getElementById('id_torneo').value;
+        const nombre = document.getElementById('nombre_torneo').value;
+        const fecha = document.getElementById('fechahora_torneo').value;
+        const tipo = document.getElementById('tipo_torneo').value;
+        const max = document.getElementById('max_num_grupos').value;
+
+        // Construir URL para el Google Apps Script
+        // Usamos action=write y hoja=listatorneos según lo programado en Google
+        const urlFinal = `${SCRIPT_URL}?token=${tokenRecibido}&hoja=listatorneos&action=write&id_torneo=${encodeURIComponent(id_t)}&nombre_torneo=${encodeURIComponent(nombre)}&fechahora_torneo=${encodeURIComponent(fecha)}&tipo_torneo=${encodeURIComponent(tipo)}&max_num_grupos=${max}`;
+
+        try {
+            const response = await fetch(urlFinal);
+            const resultado = await response.json();
+
+            if (resultado.result === "ok") {
+                mensajeDiv.innerText = "✅ ¡Torneo guardado con éxito!";
+                mensajeDiv.style.backgroundColor = "#d4edda";
+                form.reset();
+            } else {
+                throw new Error(resultado.error || "Error desconocido");
+            }
+        } catch (error) {
+            mensajeDiv.innerText = "❌ Error: " + error.message;
+            mensajeDiv.style.backgroundColor = "#f8d7da";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Crear Torneo";
+        }
+    });
+</script>
+
+</body>
+</html>
