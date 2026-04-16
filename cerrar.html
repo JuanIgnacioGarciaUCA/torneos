@@ -5,19 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cerrar Torneo</title>
     <style>
-        body { font-family: sans-serif; background: #fff3e0; padding: 20px; display: flex; justify-content: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #fff3e0; padding: 20px; display: flex; justify-content: center; }
         .container { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .player-list { font-size: 0.85em; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
-        button { width: 100%; padding: 12px; background: #ef6c00; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        select, input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        h2 { color: #e65100; text-align: center; }
+        .player-list { font-size: 0.85em; max-height: 250px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0; background: #fafafa; }
+        
+        .aviso-bloqueo { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        
+        button { width: 100%; padding: 12px; background: #ef6c00; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #e65100; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        select, input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        input[readonly], select[disabled] { background: #eee; }
+        
+        .grupo-tag { display: inline-block; background: #ef6c00; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-right: 5px; }
+        .item-jugador { padding: 5px 0; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
 <div class="container" id="main">
-    <h2>Cerrar Torneo e Iniciar Partidos</h2>
-    <div id="info-t" style="font-weight: bold;"></div>
+    <h2>Gestión de Cierre</h2>
     
-    <div class="player-list" id="lista">Cargando jugadores...</div>
+    <!-- Aviso de Torneo Cerrado -->
+    <div id="aviso-cerrado" class="aviso-bloqueo" style="display: none;">
+        ⚠️ EL TORNEO YA ESTÁ CERRADO<br>
+        <small>Los partidos ya han sido generados y no se pueden modificar desde aquí.</small>
+    </div>
+
+    <div id="info-t" style="font-weight: bold; margin-bottom: 10px; color: #555;"></div>
+    
+    <label>Jugadores inscritos:</label>
+    <div class="player-list" id="lista">Cargando datos...</div>
 
     <label>Tipo de Torneo:</label>
     <select id="tipo">
@@ -33,8 +52,8 @@
 
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
-    const HASH1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1"; // torneos_jigg
-    const HASH2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7"; // admin1
+    const HASH1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+    const HASH2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7";
     
     const params = new URLSearchParams(window.location.search);
     const t1 = params.get('token') || "";
@@ -42,6 +61,7 @@
     const idT = params.get('id_torneo');
 
     let jugadores = [];
+    let yaCerrado = false;
     
     async function sha256(txt) {
         const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
@@ -50,31 +70,93 @@
 
     async function validar() {
         if (await sha256(t1) === HASH1 && await sha256(t2) === HASH2) {
-            cargarJugadores();
+            verificarEstadoYCargar();
         } else {
-            document.body.innerHTML = "<h1>No autorizado</h1>";
+            document.body.innerHTML = "<h1 style='text-align:center; color:red;'>Acceso No Autorizado</h1>";
         }   
     }
     validar();
 
-    async function cargarJugadores() {
-        const res = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=jugadores&action=read&id_torneo=${idT}`);
-        const data = await res.json();
-        jugadores = data.datos || [];
-        document.getElementById('lista').innerHTML = jugadores.map(j => `<div>${j.nombre_jugador} (${j.nivel})</div>`).join('');
-        document.getElementById('info-t').innerText = "ID Torneo: " + idT + " (" + jugadores.length + " jugadores)";
+    async function verificarEstadoYCargar() {
+        try {
+            // 1. Consultar si hay partidos
+            const resP = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=read&id_torneo=${idT}`);
+            const dataP = await resP.json();
+            const partidosExistentes = dataP.datos || [];
+
+            // 2. Consultar jugadores
+            const resJ = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=jugadores&action=read&id_torneo=${idT}`);
+            const dataJ = await resJ.json();
+            jugadores = dataJ.datos || [];
+
+            if (partidosExistentes.length > 0) {
+                yaCerrado = true;
+                bloquearInterfaz(partidosExistentes);
+            }
+
+            mostrarJugadores(partidosExistentes);
+            document.getElementById('info-t').innerText = `Torneo: ${idT} | Total: ${jugadores.length} jugadores`;
+
+        } catch (e) {
+            alert("Error al cargar datos del servidor");
+        }
+    }
+
+    function bloquearInterfaz(partidos) {
+        document.getElementById('aviso-cerrado').style.display = 'block';
+        document.getElementById('btn-cerrar').disabled = true;
+        document.getElementById('btn-cerrar').innerText = "TORNEO CERRADO";
+        document.getElementById('tipo').disabled = true;
+        document.getElementById('num_grupos').readOnly = true;
+
+        // Intentar deducir el tipo y número de grupos de los partidos existentes
+        const tiposUnicos = [...new Set(partidos.map(p => p.tipo_partido))];
+        if (tiposUnicos.length > 1) {
+            document.getElementById('tipo').value = "Grupos";
+            document.getElementById('num_grupos').value = tiposUnicos.length;
+        } else {
+            document.getElementById('tipo').value = "Liga";
+            document.getElementById('num_grupos').value = 1;
+        }
+    }
+
+    function mostrarJugadores(partidos) {
+        const listaDiv = document.getElementById('lista');
+        listaDiv.innerHTML = "";
+
+        // Diccionario para saber en qué grupo está cada jugador si ya está cerrado
+        const mappingGrupos = {};
+        if (yaCerrado) {
+            partidos.forEach(p => {
+                mappingGrupos[p.id_jugador1] = p.tipo_partido;
+                mappingGrupos[p.id_jugador2] = p.tipo_partido;
+            });
+        }
+
+        jugadores.forEach(j => {
+            const grupoInfo = mappingGrupos[j.id_jugador] ? `<span class="grupo-tag">${mappingGrupos[j.id_jugador]}</span>` : "";
+            listaDiv.innerHTML += `
+                <div class="item-jugador">
+                    ${grupoInfo} <strong>${j.nombre_jugador}</strong> <small>(${j.nivel})</small>
+                </div>`;
+        });
     }
 
     document.getElementById('btn-cerrar').addEventListener('click', async () => {
-        if (jugadores.length < 2) return alert("Mínimo 2 jugadores");
+        if (yaCerrado) return;
+        if (jugadores.length < 2) return alert("Necesitas al menos 2 jugadores para generar partidos.");
+        
+        const confirmacion = confirm("¿Estás seguro? Una vez generados los partidos, la inscripción de nuevos jugadores se bloqueará.");
+        if (!confirmacion) return;
+
         const btn = document.getElementById('btn-cerrar');
         btn.disabled = true;
-        btn.innerText = "Generando...";
+        btn.innerText = "Procesando...";
 
         const tipo = document.getElementById('tipo').value;
         const nGrupos = parseInt(document.getElementById('num_grupos').value);
 
-        // 1. Mapeo de niveles para ordenar
+        // 1. Mapeo de niveles para ordenar (Pro a Principiante)
         const nivVal = { "Pro": 4, "Avanzado": 3, "Intermedio": 2, "Principiante": 1 };
         jugadores.sort((a, b) => (nivVal[b.nivel] || 0) - (nivVal[a.nivel] || 0));
 
@@ -88,14 +170,16 @@
             else { g--; if (g === -1) { g = 0; reverse = false; } }
         });
 
-        // 3. Crear enfrentamientos (Round Robin por grupo)
+        // 3. Crear enfrentamientos (Round Robin)
         let partidos = [];
         grupos.forEach((grupo, idxG) => {
+            let contadorPartidosGrupo = 1;
             for (let i = 0; i < grupo.length; i++) {
                 for (let j = i + 1; j < grupo.length; j++) {
+                    const nombreGrupo = (nGrupos > 1) ? `Grupo ${idxG + 1}` : "Liga Única";
                     partidos.push({
-                        id_p: "G" + (idxG + 1) + "-P" + (partidos.length + 1),
-                        tipo: "Grupo " + (idxG + 1),
+                        id_p: `G${idxG + 1}-P${contadorPartidosGrupo++}`,
+                        tipo: nombreGrupo,
                         j1: grupo[i].id_jugador,
                         j2: grupo[j].id_jugador
                     });
@@ -103,14 +187,24 @@
             }
         });
 
-        // 4. Enviar a Google (uno por uno)
+        // 4. Enviar a Google Apps Script
+        let errores = 0;
         for (let p of partidos) {
-            const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=${p.id_p}&tipo_partido=${p.tipo}&id_jugador1=${p.j1}&id_jugador2=${p.j2}`;
-            await fetch(url);
+            try {
+                const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=${p.id_p}&tipo_partido=${encodeURIComponent(p.tipo)}&id_jugador1=${p.j1}&id_jugador2=${p.j2}`;
+                await fetch(url);
+            } catch (e) {
+                errores++;
+            }
         }
 
-        alert("Torneo cerrado y " + partidos.length + " partidos generados.");
-        window.location.reload();
+        if (errores === 0) {
+            alert(`Éxito: Se han generado ${partidos.length} partidos.`);
+        } else {
+            alert(`Atención: Se generaron partidos pero hubo ${errores} errores de conexión.`);
+        }
+        
+        location.reload();
     });
 </script>
 </body>
