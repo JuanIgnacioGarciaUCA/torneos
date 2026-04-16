@@ -7,25 +7,18 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #fff3e0; padding: 20px; display: flex; justify-content: center; }
         .container { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        
         h2 { color: #e65100; text-align: center; margin-bottom: 5px; }
         .subtitulo { text-align: center; color: #666; font-size: 0.9em; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        
-        /* Caja de Info del Torneo */
         .card-torneo { background: #fff8f1; border: 1px solid #ffe0b2; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
         .card-torneo h3 { margin: 0; color: #bf360c; font-size: 1.2em; }
         .card-torneo p { margin: 5px 0 0; font-size: 0.9em; color: #5d4037; }
-
         .player-list { font-size: 0.85em; max-height: 250px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0; background: #fafafa; border-radius: 6px; }
         .aviso-bloqueo { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px; text-align: center; font-weight: bold; }
-        
         button { width: 100%; padding: 12px; background: #ef6c00; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         button:hover { background: #e65100; }
         button:disabled { background: #ccc; cursor: not-allowed; }
-        
         select, input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         input[readonly], select[disabled] { background: #eee; }
-        
         .grupo-tag { display: inline-block; background: #ef6c00; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-right: 5px; }
         .item-jugador { padding: 6px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; }
         label { font-weight: bold; font-size: 0.9em; color: #333; }
@@ -36,14 +29,12 @@
     <h2>Gestión de cierre de inscripciones</h2>
     <div class="subtitulo">Panel de Control</div>
     
-    <!-- Información del Torneo (Nombre y Fecha) -->
     <div id="cabecera-torneo" class="card-torneo">
         <h3 id="torneo-nombre">Cargando nombre...</h3>
         <p id="torneo-fecha">Cargando fecha...</p>
         <p style="font-size: 0.7em; color: #999; margin-top: 8px;">ID: <span id="torneo-id"></span></p>
     </div>
 
-    <!-- Aviso de Torneo Cerrado -->
     <div id="aviso-cerrado" class="aviso-bloqueo" style="display: none;">
         ⚠️ INSCRIPCIONES CERRADAS<br>
         <small>Los partidos ya han sido generados para este torneo.</small>
@@ -76,6 +67,10 @@
 
     let jugadores = [];
     let yaCerrado = false;
+
+    // Variables para guardar los datos actuales y poder devolverlos al actualizar
+    let nombreTorneoOriginal = "";
+    let fechaTorneoOriginal = "";
     
     async function sha256(txt) {
         const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
@@ -93,40 +88,38 @@
 
     async function cargarTodo() {
         try {
-            // 1. Cargar Datos del Torneo (Nombre y Fecha)
             const resT = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=listatorneos&action=read&id_torneo=${idT}`);
             const dataT = await resT.json();
             if (dataT.datos && dataT.datos.length > 0) {
                 const t = dataT.datos[0];
+                nombreTorneoOriginal = t.nombre_torneo;
+                fechaTorneoOriginal = t.fechahora_torneo; // Guardamos el valor original para el update
+                
                 document.getElementById('torneo-nombre').innerText = t.nombre_torneo;
                 document.getElementById('torneo-fecha').innerText = new Date(t.fechahora_torneo).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' });
                 document.getElementById('torneo-id').innerText = idT;
             }
 
-            // 2. Consultar si ya hay partidos (Cerrado)
             const resP = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=read&id_torneo=${idT}`);
             const dataP = await resP.json();
             const partidosExistentes = dataP.datos || [];
 
-            // 3. Consultar jugadores inscritos
             const resJ = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=jugadores&action=read&id_torneo=${idT}`);
             const dataJ = await resJ.json();
             jugadores = dataJ.datos || [];
 
             if (partidosExistentes.length > 0) {
                 yaCerrado = true;
-                bloquearInterfaz(partidosExistentes);
+                bloquearInterfaz();
             }
-
             mostrarJugadores(partidosExistentes);
 
         } catch (e) {
-            console.error(e);
             alert("Error al sincronizar con Google Sheets");
         }
     }
 
-    function bloquearInterfaz(partidos) {
+    function bloquearInterfaz() {
         document.getElementById('aviso-cerrado').style.display = 'block';
         document.getElementById('btn-cerrar').disabled = true;
         document.getElementById('btn-cerrar').innerText = "INSCRIPCIÓN BLOQUEADA";
@@ -137,7 +130,6 @@
     function mostrarJugadores(partidos) {
         const listaDiv = document.getElementById('lista');
         listaDiv.innerHTML = "";
-
         const mappingGrupos = {};
         if (yaCerrado) {
             partidos.forEach(p => {
@@ -145,73 +137,76 @@
                 mappingGrupos[p.id_jugador2] = p.tipo_partido;
             });
         }
-
         if (jugadores.length === 0) {
             listaDiv.innerHTML = "<p style='text-align:center; color:#999;'>No hay jugadores inscritos todavía.</p>";
             return;
         }
-
         jugadores.forEach(j => {
             const grupoInfo = mappingGrupos[j.id_jugador] ? `<span class="grupo-tag">${mappingGrupos[j.id_jugador]}</span>` : "";
-            listaDiv.innerHTML += `
-                <div class="item-jugador">
-                    ${grupoInfo} <strong>${j.nombre_jugador}</strong> &nbsp; <small>(${j.nivel})</small>
-                </div>`;
+            listaDiv.innerHTML += `<div class="item-jugador">${grupoInfo} <strong>${j.nombre_jugador}</strong> &nbsp; <small>(${j.nivel})</small></div>`;
         });
     }
 
     document.getElementById('btn-cerrar').addEventListener('click', async () => {
         if (yaCerrado) return;
         if (jugadores.length < 2) return alert("Se requieren al menos 2 jugadores.");
-        
-        if (!confirm("¿Deseas cerrar las inscripciones ahora? Se generarán los partidos automáticamente.")) return;
+        if (!confirm("¿Deseas cerrar las inscripciones ahora? Se actualizará el torneo y se generarán los partidos.")) return;
 
         const btn = document.getElementById('btn-cerrar');
         btn.disabled = true;
-        btn.innerText = "Generando partidos...";
+        btn.innerText = "Actualizando torneo...";
 
         const tipo = document.getElementById('tipo').value;
         const nGrupos = parseInt(document.getElementById('num_grupos').value);
 
-        // 1. Ordenar por nivel (Pro -> Principiante)
-        const nivVal = { "Pro": 4, "Avanzado": 3, "Intermedio": 2, "Principiante": 1 };
-        jugadores.sort((a, b) => (nivVal[b.nivel] || 0) - (nivVal[a.nivel] || 0));
+        try {
+            // --- PASO 1: ACTUALIZAR LA HOJA listatorneos ---
+            // Usamos la misma lógica de "write" que busca por id_torneo y sobrescribe la fila
+            const urlUpdateTorneo = `${SCRIPT_URL}?token=${t1}&hoja=listatorneos&action=write&id_torneo=${idT}&nombre_torneo=${encodeURIComponent(nombreTorneoOriginal)}&fechahora_torneo=${fechaTorneoOriginal}&tipo_torneo=${encodeURIComponent(tipo)}&max_num_grupos=${nGrupos}`;
+            await fetch(urlUpdateTorneo);
 
-        // 2. Snake Seeding
-        let grupos = Array.from({ length: nGrupos }, () => []);
-        let reverse = false;
-        let g = 0;
-        jugadores.forEach(j => {
-            grupos[g].push(j);
-            if (!reverse) { g++; if (g === nGrupos) { g = nGrupos - 1; reverse = true; } }
-            else { g--; if (g === -1) { g = 0; reverse = false; } }
-        });
+            // --- PASO 2: GENERAR PARTIDOS ---
+            btn.innerText = "Generando partidos...";
+            const nivVal = { "Pro": 4, "Avanzado": 3, "Intermedio": 2, "Principiante": 1 };
+            jugadores.sort((a, b) => (nivVal[b.nivel] || 0) - (nivVal[a.nivel] || 0));
 
-        // 3. Crear enfrentamientos
-        let partidos = [];
-        grupos.forEach((grupo, idxG) => {
-            let contador = 1;
-            for (let i = 0; i < grupo.length; i++) {
-                for (let j = i + 1; j < grupo.length; j++) {
-                    const nombreG = (nGrupos > 1) ? `Grupo ${idxG + 1}` : "Liga Única";
-                    partidos.push({
-                        id_p: `G${idxG + 1}-P${contador++}`,
-                        tipo: nombreG,
-                        j1: grupo[i].id_jugador,
-                        j2: grupo[j].id_jugador
-                    });
+            let grupos = Array.from({ length: nGrupos }, () => []);
+            let reverse = false, g = 0;
+            jugadores.forEach(j => {
+                grupos[g].push(j);
+                if (!reverse) { g++; if (g === nGrupos) { g = nGrupos - 1; reverse = true; } }
+                else { g--; if (g === -1) { g = 0; reverse = false; } }
+            });
+
+            let partidos = [];
+            grupos.forEach((grupo, idxG) => {
+                let contador = 1;
+                for (let i = 0; i < grupo.length; i++) {
+                    for (let j = i + 1; j < grupo.length; j++) {
+                        const nombreG = (nGrupos > 1) ? `Grupo ${idxG + 1}` : "Liga Única";
+                        partidos.push({
+                            id_p: `G${idxG + 1}-P${contador++}`,
+                            tipo: nombreG,
+                            j1: grupo[i].id_jugador,
+                            j2: grupo[j].id_jugador
+                        });
+                    }
                 }
+            });
+
+            for (let p of partidos) {
+                const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=${p.id_p}&tipo_partido=${encodeURIComponent(p.tipo)}&id_jugador1=${p.j1}&id_jugador2=${p.j2}`;
+                await fetch(url);
             }
-        });
 
-        // 4. Enviar a Google
-        for (let p of partidos) {
-            const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=${p.id_p}&tipo_partido=${encodeURIComponent(p.tipo)}&id_jugador1=${p.j1}&id_jugador2=${p.j2}`;
-            await fetch(url);
+            alert("¡Torneo actualizado y partidos creados con éxito!");
+            location.reload();
+
+        } catch (e) {
+            alert("Error durante el proceso de cierre.");
+            btn.disabled = false;
+            btn.innerText = "CERRAR INSCRIPCIÓN Y GENERAR CUADRO";
         }
-
-        alert("¡Proceso completado! Los jugadores han sido repartidos y los partidos creados.");
-        location.reload();
     });
 </script>
 </body>
