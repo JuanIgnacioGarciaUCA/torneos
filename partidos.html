@@ -5,18 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resultados de Partidos</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { color: #d93025; text-align: center; }
-        .info-torneo { background: #feede8; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; }
-        form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .full { grid-column: span 2; }
-        label { font-size: 0.8em; font-weight: bold; color: #666; }
-        input, select, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        button { background-color: #d93025; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        h2 { color: #d93025; text-align: center; margin-top: 0; }
+        
+        .info-header { background: #feede8; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; border: 1px solid #fadbd8; }
+        
+        .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .list-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px; max-height: 150px; overflow-y: auto; font-size: 0.85em; }
+        .list-box h4 { margin: 0 0 8px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+
+        form { background: #fff; border: 2px solid #d93025; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-weight: bold; color: #444; font-size: 0.9em; }
+        
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
+        .match-input { font-family: monospace; font-weight: bold; text-transform: uppercase; background: #fffde7; }
+        
+        .games-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .game-input { text-align: center; font-size: 0.9em; }
+        .help-text { font-size: 0.75em; color: #666; font-style: italic; margin-top: -10px; }
+
+        button { background-color: #d93025; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1em; transition: 0.3s; }
         button:hover { background-color: #b3261e; }
-        .games { display: flex; justify-content: space-between; gap: 5px; }
-        .games input { width: 40px; text-align: center; }
+        button:disabled { background-color: #ccc; }
+
+        .error-msg { color: #d93025; text-align: center; font-weight: bold; padding: 20px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -24,96 +39,167 @@
 <div class="container">
     <div id="contenido">
         <h2>Registrar Resultado</h2>
-        <div id="info" class="info-torneo">Torneo: ...</div>
+        <div id="info" class="info-header">Cargando datos del torneo...</div>
 
-        <form id="form-partido">
-            <div class="full">
-                <label>ID Partido:</label>
-                <input type="text" id="id_partido" placeholder="P01, P02..." required>
+        <!-- Listas informativas -->
+        <div class="grid-info">
+            <div class="list-box">
+                <h4>🏓 Jugadores</h4>
+                <div id="lista-jugadores">Cargando...</div>
             </div>
-            <div>
-                <label>Tipo Partido:</label>
-                <select id="tipo_partido">
-                    <option value="Grupo">Grupo</option>
-                    <option value="Final">Final</option>
-                    <option value="Semis">Semis</option>
-                </select>
+            <div class="list-box">
+                <h4>📅 Partidos Generados</h4>
+                <div id="lista-partidos">Cargando...</div>
             </div>
-            <div></div> <!-- Espacio -->
-            
-            <div>
-                <label>ID Jugador 1:</label>
-                <input type="text" id="id_j1" required>
-            </div>
-            <div>
-                <label>ID Jugador 2:</label>
-                <input type="text" id="id_j2" required>
+        </div>
+
+        <!-- Formulario simplificado -->
+        <form id="form-resultado">
+            <div class="form-group">
+                <label>Código del Partido (ID):</label>
+                <input type="text" id="id_partido" class="match-input" placeholder="Ej: G1-P1" required>
             </div>
 
-            <div class="full">
-                <label>Puntos por Game (G1 a G5):</label>
-                <div class="games">
-                    <input type="number" id="g1" value="0">
-                    <input type="number" id="g2" value="0">
-                    <input type="number" id="g3" value="0">
-                    <input type="number" id="g4" value="0">
-                    <input type="number" id="g5" value="0">
+            <div class="form-group">
+                <label>Resultados por Set (Game 1 al 5):</label>
+                <p class="help-text">Formato: "11-5", "11 9", "11/7"...</p>
+                <div class="games-grid">
+                    <input type="text" id="g1" class="game-input" placeholder="G1" pattern=".*\D.*">
+                    <input type="text" id="g2" class="game-input" placeholder="G2">
+                    <input type="text" id="g3" class="game-input" placeholder="G3">
+                    <input type="text" id="g4" class="game-input" placeholder="G4">
+                    <input type="text" id="g5" class="game-input" placeholder="G5">
                 </div>
             </div>
 
-            <button type="submit" id="btn-enviar" class="full">GUARDAR RESULTADO</button>
+            <button type="submit" id="btn-enviar">ACTUALIZAR RESULTADO</button>
         </form>
     </div>
+    <div id="error-auth" class="error-msg hidden">⚠️ Acceso No Autorizado</div>
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2cR6NSLbIkn-jFxwo69zTfrjomKPa7gD-udGPgTo84Wd5jwAV_xbxfboN74oEHYn7cw/exec";
-    const TOKEN_VALIDO = "torneos_jigg";
-
-
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
+    const HASH_REQUERIDO = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
 
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+    const token = params.get('token') || "";
     const idTorneo = params.get('id_torneo');
 
-    if (token === TOKEN_VALIDO && idTorneo) {
-        document.getElementById('info').innerText = "Torneo: " + idTorneo;
-    } else {
-        document.body.innerHTML = "<h1>No autorizado</h1>";
+    let cachePartidos = [];
+    let cacheJugadores = {};
+
+    async function sha256(txt) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    document.getElementById('form-partido').addEventListener('submit', async (e) => {
+    async function iniciar() {
+        if (await sha256(token) !== HASH_REQUERIDO || !idTorneo) {
+            document.getElementById('contenido').classList.add('hidden');
+            document.getElementById('error-auth').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('info').innerText = "Torneo ID: " + idTorneo;
+        cargarDatos();
+    }
+
+    async function cargarDatos() {
+        try {
+            // 1. Cargar Jugadores
+            const resJ = await fetch(`${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`);
+            const dataJ = await resJ.json();
+            const divJ = document.getElementById('lista-jugadores');
+            divJ.innerHTML = "";
+            dataJ.datos.forEach(j => {
+                cacheJugadores[j.id_jugador] = j.nombre_jugador;
+                divJ.innerHTML += `<div><b>${j.id_jugador}:</b> ${j.nombre_jugador}</div>`;
+            });
+
+            // 2. Cargar Partidos
+            const resP = await fetch(`${SCRIPT_URL}?token=${token}&hoja=lista_partidos&action=read&id_torneo=${idTorneo}`);
+            const dataP = await resP.json();
+            cachePartidos = dataP.datos || [];
+            const divP = document.getElementById('lista-partidos');
+            divP.innerHTML = "";
+            
+            if (cachePartidos.length === 0) {
+                divP.innerHTML = "No hay partidos generados.";
+            } else {
+                cachePartidos.forEach(p => {
+                    const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
+                    const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
+                    divP.innerHTML += `<div><b>${p.id_partido}:</b> ${n1} vs ${n2}</div>`;
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    document.getElementById('form-resultado').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
+        
+        const idP = document.getElementById('id_partido').value.trim().toUpperCase();
+        
+        // Buscar el partido en la caché para no perder los IDs de los jugadores ni el tipo
+        const partido = cachePartidos.find(p => p.id_partido.toUpperCase() === idP);
+        
+        if (!partido) {
+            alert("Error: El Código de Partido no existe en este torneo.");
+            return;
+        }
+
+        // Validación de formato de games (Número Separador Número)
+        const regexFormat = /^\d+\D\d+$/;
+        const games = [];
+        for(let i=1; i<=5; i++) {
+            let val = document.getElementById('g'+i).value.trim();
+            if (val !== "" && !regexFormat.test(val)) {
+                alert(`El formato del Game ${i} es incorrecto. Debe ser por ejemplo: 11-5 o 11 5`);
+                return;
+            }
+            games.push(val || "0-0");
+        }
+
         btn.disabled = true;
+        btn.innerText = "Actualizando...";
 
-        const idP = document.getElementById('id_partido').value;
-        const tipo = document.getElementById('tipo_partido').value;
-        const j1 = document.getElementById('id_j1').value;
-        const j2 = document.getElementById('id_j2').value;
-        const gs = [
-            document.getElementById('g1').value,
-            document.getElementById('g2').value,
-            document.getElementById('g3').value,
-            document.getElementById('g4').value,
-            document.getElementById('g5').value
-        ];
-
-        const query = `?token=${token}&hoja=lista_partidos&action=write&id_torneo=${idTorneo}&id_partido=${idP}&tipo_partido=${tipo}&id_jugador1=${j1}&id_jugador2=${j2}&g1=${gs[0]}&g2=${gs[1]}&g3=${gs[2]}&g4=${gs[3]}&g5=${gs[4]}`;
+        // Construir URL con todos los campos necesarios para el Upsert de Google Sheets
+        const query = new URLSearchParams({
+            token: token,
+            hoja: "lista_partidos",
+            action: "write",
+            id_torneo: idTorneo,
+            id_partido: partido.id_partido,
+            tipo_partido: partido.tipo_partido,
+            id_jugador1: partido.id_jugador1,
+            id_jugador2: partido.id_jugador2,
+            g1: games[0],
+            g2: games[1],
+            g3: games[2],
+            g4: games[3],
+            g5: games[4]
+        });
 
         try {
-            const res = await fetch(SCRIPT_URL + query);
+            const res = await fetch(`${SCRIPT_URL}?${query.toString()}`);
             const data = await res.json();
             if (data.result === "ok") {
-                alert("Resultado actualizado");
-                document.getElementById('form-partido').reset();
+                alert("✅ Resultado guardado correctamente.");
+                document.getElementById('form-resultado').reset();
+                cargarDatos(); // Recargar para ver si hay cambios
             }
         } catch (err) {
-            alert("Error al enviar");
+            alert("Error de conexión");
         } finally {
             btn.disabled = false;
+            btn.innerText = "ACTUALIZAR RESULTADO";
         }
     });
+
+    iniciar();
 </script>
 </body>
 </html>
