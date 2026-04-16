@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Revisión de Torneo</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #eee; }
+        .ganador { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Clasificación Actual</h2>
+        <div id="tabla-clasificacion">Cargando...</div>
+    </div>
+    <div class="card">
+        <h2>Partidos y Resultados</h2>
+        <div id="lista-partidos">Cargando...</div>
+    </div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
+    const params = new URLSearchParams(window.location.search);
+    const t1 = params.get('token');
+    const idT = params.get('id_torneo');
+
+    async function cargar() {
+        // Cargar jugadores para tener los nombres
+        const resJ = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=jugadores&action=read&id_torneo=${idT}`);
+        const dataJ = await resJ.json();
+        const dicJ = {};
+        dataJ.datos.forEach(j => dicJ[j.id_jugador] = j.nombre_jugador);
+
+        // Cargar partidos
+        const resP = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=read&id_torneo=${idT}`);
+        const dataP = await resP.json();
+        const partidos = dataP.datos || [];
+
+        // Calcular Clasificación
+        const puntos = {};
+        partidos.forEach(p => {
+            if (!puntos[p.id_jugador1]) puntos[p.id_jugador1] = { nombre: dicJ[p.id_jugador1], pts: 0, pj: 0 };
+            if (!puntos[p.id_jugador2]) puntos[p.id_jugador2] = { nombre: dicJ[p.id_jugador2], pts: 0, pj: 0 };
+            
+            // Lógica simple: Suma de games ganados como puntos
+            const g_j1 = (parseInt(p.g1)||0) + (parseInt(p.g2)||0) + (parseInt(p.g3)||0) + (parseInt(p.g4)||0) + (parseInt(p.g5)||0);
+            // Esto es solo un ejemplo, puedes ajustar la lógica de puntos aquí
+            if (g_j1 > 0) { // Si hay resultados anotados
+                puntos[p.id_jugador1].pj++;
+                puntos[p.id_jugador2].pj++;
+                // Aquí podrías definir quién ganó el partido
+            }
+        });
+
+        // Renderizar Partidos
+        document.getElementById('lista-partidos').innerHTML = partidos.map(p => `
+            <div style="border-bottom: 1px solid #eee; padding: 5px;">
+                <b>${p.tipo}:</b> ${dicJ[p.id_jugador1]} vs ${dicJ[p.id_jugador2]} 
+                <br>Resultado: [${p.g1}, ${p.g2}, ${p.g3}, ${p.g4}, ${p.g5}]
+            </div>
+        `).join('');
+
+        document.getElementById('tabla-clasificacion').innerHTML = "Tabla generada en base a resultados registrados.";
+    }
+    cargar();
+</script>
+</body>
+</html>

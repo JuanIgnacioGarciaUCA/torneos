@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cerrar Torneo</title>
+    <style>
+        body { font-family: sans-serif; background: #fff3e0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .player-list { font-size: 0.85em; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+        button { width: 100%; padding: 12px; background: #ef6c00; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        select, input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+<div class="container" id="main">
+    <h2>Cerrar Torneo e Iniciar Partidos</h2>
+    <div id="info-t" style="font-weight: bold;"></div>
+    
+    <div class="player-list" id="lista">Cargando jugadores...</div>
+
+    <label>Tipo de Torneo:</label>
+    <select id="tipo">
+        <option value="Grupos">Grupos (Snake Seeding)</option>
+        <option value="Liga">Liga Única</option>
+    </select>
+
+    <label>Número de Grupos/Mesas:</label>
+    <input type="number" id="num_grupos" value="2" min="1">
+
+    <button id="btn-cerrar">GENERAR PARTIDOS Y CERRAR</button>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
+    const HASH2 = "e290f84897f21e89f899e1599818815124b898a129ef999810565863c0f4f56f"; // admin1
+    
+    const params = new URLSearchParams(window.location.search);
+    const t1 = params.get('token');
+    const t2 = params.get('token2');
+    const idT = params.get('id_torneo');
+
+    let jugadores = [];
+
+    async function validar() {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t2));
+        const h = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        if (h !== HASH2) { document.body.innerHTML = "<h1>No autorizado</h1>"; return; }
+        cargarJugadores();
+    }
+    validar();
+
+    async function cargarJugadores() {
+        const res = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=jugadores&action=read&id_torneo=${idT}`);
+        const data = await res.json();
+        jugadores = data.datos || [];
+        document.getElementById('lista').innerHTML = jugadores.map(j => `<div>${j.nombre_jugador} (${j.nivel})</div>`).join('');
+        document.getElementById('info-t').innerText = "ID Torneo: " + idT + " (" + jugadores.length + " jugadores)";
+    }
+
+    document.getElementById('btn-cerrar').addEventListener('click', async () => {
+        if (jugadores.length < 2) return alert("Mínimo 2 jugadores");
+        const btn = document.getElementById('btn-cerrar');
+        btn.disabled = true;
+        btn.innerText = "Generando...";
+
+        const tipo = document.getElementById('tipo').value;
+        const nGrupos = parseInt(document.getElementById('num_grupos').value);
+
+        // 1. Mapeo de niveles para ordenar
+        const nivVal = { "Pro": 4, "Avanzado": 3, "Intermedio": 2, "Principiante": 1 };
+        jugadores.sort((a, b) => (nivVal[b.nivel] || 0) - (nivVal[a.nivel] || 0));
+
+        // 2. Reparto Snake Seeding
+        let grupos = Array.from({ length: nGrupos }, () => []);
+        let reverse = false;
+        let g = 0;
+        jugadores.forEach(j => {
+            grupos[g].push(j);
+            if (!reverse) { g++; if (g === nGrupos) { g = nGrupos - 1; reverse = true; } }
+            else { g--; if (g === -1) { g = 0; reverse = false; } }
+        });
+
+        // 3. Crear enfrentamientos (Round Robin por grupo)
+        let partidos = [];
+        grupos.forEach((grupo, idxG) => {
+            for (let i = 0; i < grupo.length; i++) {
+                for (let j = i + 1; j < grupo.length; j++) {
+                    partidos.push({
+                        id_p: "G" + (idxG + 1) + "-P" + (partidos.length + 1),
+                        tipo: "Grupo " + (idxG + 1),
+                        j1: grupo[i].id_jugador,
+                        j2: grupo[j].id_jugador
+                    });
+                }
+            }
+        });
+
+        // 4. Enviar a Google (uno por uno)
+        for (let p of partidos) {
+            const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=${p.id_p}&tipo_partido=${p.tipo}&id_jugador1=${p.j1}&id_jugador2=${p.j2}`;
+            await fetch(url);
+        }
+
+        alert("Torneo cerrado y " + partidos.length + " partidos generados.");
+        window.location.reload();
+    });
+</script>
+</body>
+</html>
