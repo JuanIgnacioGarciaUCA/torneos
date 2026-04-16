@@ -42,7 +42,6 @@
         h2 { margin: 0; font-size: 1.4rem; }
         #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
-        /* Paneles de información */
         .info-panel {
             display: flex;
             gap: 10px;
@@ -78,7 +77,6 @@
             border-bottom: 1px solid #f1f1f1;
         }
 
-        /* Estilo para los resultados guardados en la lista */
         .score-preview {
             display: block;
             color: var(--accent);
@@ -88,7 +86,6 @@
             font-size: 0.8rem;
         }
 
-        /* Formulario */
         .form-card {
             background: var(--card);
             padding: 20px;
@@ -208,7 +205,8 @@
     }
 
     async function iniciar() {
-        if (await sha256(token) !== HASH_REQUERIDO || !idTorneo) {
+        const h = await sha256(token);
+        if (h !== HASH_REQUERIDO || !idTorneo) {
             document.getElementById('main-view').classList.add('hidden');
             document.getElementById('error-auth').classList.remove('hidden');
             return;
@@ -219,7 +217,6 @@
 
     async function cargarDatos() {
         try {
-            // 1. Cargar Jugadores
             const resJ = await fetch(`${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`);
             const dataJ = await resJ.json();
             const divJ = document.getElementById('lista-jugadores');
@@ -229,7 +226,6 @@
                 divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
             });
 
-            // 2. Cargar Partidos y sus resultados
             const resP = await fetch(`${SCRIPT_URL}?token=${token}&hoja=lista_partidos&action=read&id_torneo=${idTorneo}`);
             const dataP = await resP.json();
             cachePartidos = dataP.datos || [];
@@ -239,8 +235,6 @@
             cachePartidos.forEach(p => {
                 const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
                 const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
-                
-                // Filtrar resultados que no sean 0-0 o vacíos para mostrar
                 const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0" && s !== 0);
                 const scoreDisplay = scores.length > 0 ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` : '<span class="score-preview" style="color:#bbb">Sin resultado</span>';
 
@@ -265,7 +259,7 @@
         const games = [];
         for(let i=1; i<=5; i++) {
             let val = document.getElementById('g'+i).value.trim();
-            if (val !== "" && !regexFormat.test(val)) return alert(`Formato de Set ${i} incorrecto. Usa por ejemplo: 11-5`);
+            if (val !== "" && !regexFormat.test(val)) return alert(`Formato de Set ${i} incorrecto.`);
             games.push(val || "0-0");
         }
 
@@ -283,12 +277,11 @@
             const res = await fetch(`${SCRIPT_URL}?${query.toString()}`);
             const data = await res.json();
             if (data.result === "ok") {
-                alert("✅ Guardado");
-                document.getElementById('form-resultado').reset();
-                cargarDatos(); // Recarga la lista para ver el nuevo resultado
+                alert("✅ Resultado guardado correctamente.");
+                // ALERTA: Recargamos la página después de aceptar el mensaje
+                location.reload(); 
             }
-        } catch (err) { alert("Error al guardar"); }
-        finally { btn.disabled = false; btn.innerText = "GUARDAR RESULTADO"; }
+        } catch (err) { alert("Error al guardar"); btn.disabled = false; btn.innerText = "GUARDAR RESULTADO"; }
     });
 
     iniciar();
