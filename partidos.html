@@ -10,6 +10,7 @@
             --bg: #f8f9fa;
             --card: #ffffff;
             --text: #3c4043;
+            --accent: #1a73e8;
         }
 
         body { 
@@ -41,27 +42,51 @@
         h2 { margin: 0; font-size: 1.4rem; }
         #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
-        /* Paneles de información (Jugadores y Partidos) */
+        /* Paneles de información */
         .info-panel {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-            overflow-x: auto; /* Scroll lateral en móviles pequeños */
+            overflow-x: auto; 
             padding-bottom: 10px;
         }
 
         .list-box {
-            flex: 0 0 75%; /* Cada caja ocupa el 75% del ancho para invitar a deslizar */
+            flex: 0 0 85%; 
             background: var(--card);
             border-radius: 12px;
             padding: 12px;
             border: 1px solid #e0e0e0;
-            max-height: 180px;
+            max-height: 220px;
             overflow-y: auto;
             font-size: 0.85rem;
         }
 
-        .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; }
+        .list-box h4 { 
+            margin: 0 0 8px 0; 
+            color: var(--primary); 
+            border-bottom: 1px solid #fce8e6; 
+            padding-bottom: 5px; 
+            position: sticky; 
+            top: 0; 
+            background: white; 
+            z-index: 1;
+        }
+
+        .match-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        /* Estilo para los resultados guardados en la lista */
+        .score-preview {
+            display: block;
+            color: var(--accent);
+            font-family: monospace;
+            font-weight: bold;
+            margin-top: 3px;
+            font-size: 0.8rem;
+        }
 
         /* Formulario */
         .form-card {
@@ -80,9 +105,8 @@
             padding: 14px;
             border: 2px solid #eee;
             border-radius: 10px;
-            font-size: 16px; /* Evita zoom en iOS */
+            font-size: 16px; 
             box-sizing: border-box;
-            transition: border-color 0.3s;
         }
 
         input:focus { border-color: var(--primary); outline: none; }
@@ -90,20 +114,14 @@
         .id-input { 
             font-family: 'Courier New', monospace; 
             text-transform: uppercase; 
-            background: #fff8f7;
+            background: #fffde7;
             font-weight: bold;
-            letter-spacing: 1px;
         }
 
-        /* Rejilla de Games */
         .games-container {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* 3 arriba, 2 abajo */
+            grid-template-columns: repeat(3, 1fr); 
             gap: 10px;
-        }
-        .games-container input:nth-child(4), 
-        .games-container input:nth-child(5) {
-            grid-column: span 1;
         }
 
         .help-text { font-size: 0.75rem; color: #70757a; margin-bottom: 10px; display: block; }
@@ -118,14 +136,11 @@
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(217, 48, 37, 0.3);
             margin-top: 10px;
         }
 
-        button:active { transform: scale(0.98); }
-        button:disabled { background-color: #dadce0; box-shadow: none; }
+        button:disabled { background-color: #dadce0; }
 
-        .error-view { text-align: center; padding: 40px 20px; color: var(--primary); }
         .hidden { display: none; }
     </style>
 </head>
@@ -137,29 +152,27 @@
         <div id="info">Sincronizando...</div>
     </div>
 
-    <!-- Paneles de referencia -->
     <div class="info-panel">
         <div class="list-box">
-            <h4>🏓 Jugadores</h4>
-            <div id="lista-jugadores">Cargando...</div>
+            <h4>📅 Partidos y Resultados</h4>
+            <div id="lista-partidos">Cargando partidos...</div>
         </div>
         <div class="list-box">
-            <h4>📅 Partidos</h4>
-            <div id="lista-partidos">Cargando...</div>
+            <h4>🏓 Jugadores</h4>
+            <div id="lista-jugadores">Cargando jugadores...</div>
         </div>
     </div>
 
-    <!-- Formulario -->
     <div class="form-card">
         <form id="form-resultado">
             <div class="form-group">
                 <label>Código del Partido:</label>
-                <input type="text" id="id_partido" class="id-input" placeholder="EJ: G1-P1" required autofocus>
+                <input type="text" id="id_partido" class="id-input" placeholder="EJ: G1-P1" required>
             </div>
 
             <div class="form-group">
                 <label>Resultados por Set:</label>
-                <span class="help-text">Usa guion o espacio (ej: 11-5)</span>
+                <span class="help-text">Formato: 11-5, 11 9 (dos números)</span>
                 <div class="games-container">
                     <input type="text" id="g1" placeholder="Set 1">
                     <input type="text" id="g2" placeholder="Set 2">
@@ -169,14 +182,13 @@
                 </div>
             </div>
 
-            <button type="submit" id="btn-enviar">GUARDAR CAMBIOS</button>
+            <button type="submit" id="btn-enviar">GUARDAR RESULTADO</button>
         </form>
     </div>
 </div>
 
-<div id="error-auth" class="error-view hidden">
+<div id="error-auth" class="hidden" style="text-align:center; padding:50px; color:red;">
     <h3>⚠️ Acceso Denegado</h3>
-    <p>Token o ID de torneo no válidos.</p>
 </div>
 
 <script>
@@ -207,6 +219,7 @@
 
     async function cargarDatos() {
         try {
+            // 1. Cargar Jugadores
             const resJ = await fetch(`${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`);
             const dataJ = await resJ.json();
             const divJ = document.getElementById('lista-jugadores');
@@ -216,6 +229,7 @@
                 divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
             });
 
+            // 2. Cargar Partidos y sus resultados
             const resP = await fetch(`${SCRIPT_URL}?token=${token}&hoja=lista_partidos&action=read&id_torneo=${idTorneo}`);
             const dataP = await resP.json();
             cachePartidos = dataP.datos || [];
@@ -225,9 +239,18 @@
             cachePartidos.forEach(p => {
                 const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
                 const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
-                divP.innerHTML += `<div><b>${p.id_partido}:</b> ${n1} / ${n2}</div>`;
+                
+                // Filtrar resultados que no sean 0-0 o vacíos para mostrar
+                const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0" && s !== 0);
+                const scoreDisplay = scores.length > 0 ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` : '<span class="score-preview" style="color:#bbb">Sin resultado</span>';
+
+                divP.innerHTML += `
+                    <div class="match-item">
+                        <b>${p.id_partido}:</b> ${n1} vs ${n2}
+                        ${scoreDisplay}
+                    </div>`;
             });
-        } catch (e) { document.getElementById('info').innerText = "Error de conexión"; }
+        } catch (e) { console.error(e); }
     }
 
     document.getElementById('form-resultado').addEventListener('submit', async (e) => {
@@ -242,7 +265,7 @@
         const games = [];
         for(let i=1; i<=5; i++) {
             let val = document.getElementById('g'+i).value.trim();
-            if (val !== "" && !regexFormat.test(val)) return alert(`Formato de Set ${i} incorrecto (ej: 11-5)`);
+            if (val !== "" && !regexFormat.test(val)) return alert(`Formato de Set ${i} incorrecto. Usa por ejemplo: 11-5`);
             games.push(val || "0-0");
         }
 
@@ -262,10 +285,10 @@
             if (data.result === "ok") {
                 alert("✅ Guardado");
                 document.getElementById('form-resultado').reset();
-                cargarDatos();
+                cargarDatos(); // Recarga la lista para ver el nuevo resultado
             }
         } catch (err) { alert("Error al guardar"); }
-        finally { btn.disabled = false; btn.innerText = "GUARDAR CAMBIOS"; }
+        finally { btn.disabled = false; btn.innerText = "GUARDAR RESULTADO"; }
     });
 
     iniciar();
