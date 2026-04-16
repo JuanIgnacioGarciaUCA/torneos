@@ -8,25 +8,25 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         h2 { color: #1a73e8; text-align: center; margin-top: 0; }
-        
         .info-torneo { background: #e8f0fe; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 0.9em; }
         
         form { display: flex; flex-direction: column; gap: 12px; }
         label { font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: -8px; }
-        
         input, select, button { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
         
-        /* Estilo para el ID automático (bloqueado) */
         input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold; border: 1px solid #ced4da; }
-
         button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background-color: #218838; }
-        button:disabled { background-color: #ccc; cursor: wait; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
 
         .lista { margin-top: 25px; border-top: 2px solid #eee; padding-top: 15px; }
         .jugador-item { background: #f8f9fa; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #1a73e8; }
         .nivel-badge { background: #1a73e8; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+        
+        /* Estilo para inscripción cerrada */
+        .cerrado-msg { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; border: 1px solid #ffeeba; margin-bottom: 15px; }
         .error { color: red; text-align: center; font-weight: bold; padding: 20px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -34,11 +34,16 @@
 <div class="container">
     <div id="contenido">
         <h2>Inscribir Jugador</h2>
-        <div id="info" class="info-torneo">Cargando datos del torneo...</div>
+        <div id="info" class="info-torneo">Verificando estado del torneo...</div>
+
+        <!-- Mensaje que se mostrará si la inscripción está cerrada -->
+        <div id="mensaje-cerrado" class="cerrado-msg hidden">
+            🚫 La inscripción ya está cerrada. El cuadro de partidos ya ha sido generado.
+        </div>
 
         <form id="form-jugador">
             <label>ID Jugador (Asignado automáticamente):</label>
-            <input type="text" id="id_jugador" readonly value="Cargando...">
+            <input type="text" id="id_jugador" readonly value="Calculando...">
             
             <label>Nombre Completo:</label>
             <input type="text" id="nombre_jugador" placeholder="Ej: Juan Pérez" required>
@@ -59,55 +64,73 @@
             <div id="lista-jugadores">Cargando lista...</div>
         </div>
     </div>
-    <div id="error-token" class="error" style="display:none">
-        ⚠️ Acceso Denegado. Token o ID de Torneo inválidos.
+    <div id="error-token" class="error hidden">
+        ⚠️ Acceso Denegado. Token inválido.
     </div>
 </div>
 
 <script>
-    // --- CONFIGURACIÓN ---
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2cR6NSLbIkn-jFxwo69zTfrjomKPa7gD-udGPgTo84Wd5jwAV_xbxfboN74oEHYn7cw/exec";
-    const TOKEN_VALIDO = "torneos_jigg"; // Nota: Aquí podrías usar hash si lo prefieres
+    const HASH_REQUERIDO = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
 
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+    const tokenRecibido = params.get('token') || "";
     const idTorneo = params.get('id_torneo');
 
     const inputId = document.getElementById('id_jugador');
     const btnEnviar = document.getElementById('btn-enviar');
 
-    // 1. Validar acceso
-    if (token !== TOKEN_VALIDO || !idTorneo) {
-        document.getElementById('contenido').style.display = 'none';
-        document.getElementById('error-token').style.display = 'block';
-    } else {
-        document.getElementById('info').innerText = "Torneo ID: " + idTorneo;
-        actualizarVista();
+    // Función para calcular Hash SHA-256
+    async function sha256(txt) {
+        const msgUint8 = new TextEncoder().encode(txt);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // 2. Función para cargar lista y calcular el siguiente ID
-    async function actualizarVista() {
+    async function validarAcceso() {
+        const hashCalculado = await sha256(tokenRecibido);
+        
+        if (hashCalculado !== HASH_REQUERIDO || !idTorneo) {
+            document.getElementById('contenido').classList.add('hidden');
+            document.getElementById('error-token').classList.remove('hidden');
+            return;
+        }
+
+        document.getElementById('info').innerText = "Torneo ID: " + idTorneo;
+        verificarYActualizar();
+    }
+
+    // 2. Comprobar si el torneo está CERRADO (viendo si hay partidos) y actualizar vista
+    async function verificarYActualizar() {
         inputId.value = "Calculando...";
         btnEnviar.disabled = true;
 
-        const url = `${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`;
-        
         try {
-            const res = await fetch(url);
-            const data = await res.json();
+            // A) Verificar si hay partidos (Inscripción cerrada)
+            const resPartidos = await fetch(`${SCRIPT_URL}?token=${tokenRecibido}&hoja=lista_partidos&action=read&id_torneo=${idTorneo}`);
+            const dataPartidos = await resPartidos.json();
+
+            if (dataPartidos.datos && dataPartidos.datos.length > 0) {
+                // BLOQUEAR INSCRIPCIÓN
+                document.getElementById('form-jugador').classList.add('hidden');
+                document.getElementById('mensaje-cerrado').classList.remove('hidden');
+            }
+
+            // B) Cargar lista de jugadores y calcular siguiente ID
+            const resJugadores = await fetch(`${SCRIPT_URL}?token=${tokenRecibido}&hoja=jugadores&action=read&id_torneo=${idTorneo}`);
+            const dataJugadores = await resJugadores.json();
             
             const contenedor = document.getElementById('lista-jugadores');
             contenedor.innerHTML = "";
 
             let maxId = 0;
 
-            if (data.datos && data.datos.length > 0) {
-                data.datos.forEach(j => {
-                    // Calcular el ID más alto
+            if (dataJugadores.datos && dataJugadores.datos.length > 0) {
+                dataJugadores.datos.forEach(j => {
                     const idActual = parseInt(j.id_jugador);
                     if (idActual > maxId) maxId = idActual;
 
-                    // Dibujar lista
                     contenedor.innerHTML += `
                         <div class="jugador-item">
                             <div><small>#${j.id_jugador}</small> <strong>${j.nombre_jugador}</strong></div>
@@ -118,13 +141,17 @@
                 contenedor.innerHTML = "<p style='color:#999; text-align:center;'>No hay jugadores inscritos.</p>";
             }
 
-            // Asignar el siguiente ID
-            inputId.value = maxId + 1;
-            btnEnviar.disabled = false;
+            // Solo habilitamos el ID si el formulario no está oculto (si no está cerrado)
+            if (!document.getElementById('form-jugador').classList.contains('hidden')) {
+                inputId.value = maxId + 1;
+                btnEnviar.disabled = false;
+            } else {
+                inputId.value = "CERRADO";
+            }
 
         } catch (err) {
             console.error(err);
-            document.getElementById('lista-jugadores').innerHTML = "Error al conectar con el servidor.";
+            document.getElementById('lista-jugadores').innerHTML = "Error al conectar con la base de datos.";
         }
     }
 
@@ -139,35 +166,31 @@
         const nomJ = document.getElementById('nombre_jugador').value.trim();
         const nivelJ = document.getElementById('nivel_jugador').value;
 
-        const urlParams = new URLSearchParams({
-            token: token,
-            hoja: "jugadores",
-            action: "write",
-            id_torneo: idTorneo,
-            id_jugador: idJ,
-            nombre_jugador: nomJ,
-            nivel: nivelJ
-        });
+        const url = `${SCRIPT_URL}?token=${encodeURIComponent(tokenRecibido)}&hoja=jugadores&action=write&id_torneo=${idTorneo}&id_jugador=${idJ}&nombre_jugador=${encodeURIComponent(nomJ)}&nivel=${encodeURIComponent(nivelJ)}`;
 
         try {
-            const res = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
+            const res = await fetch(url);
             const data = await res.json();
 
             if (data.result === "ok") {
                 alert("¡Inscripción exitosa! Tu número de jugador es: " + idJ);
                 document.getElementById('nombre_jugador').value = "";
-                // Recargar lista e ID
-                await actualizarVista();
+                await verificarYActualizar();
             } else {
                 alert("Error: " + data.error);
             }
         } catch (err) {
             alert("Error de conexión al guardar.");
         } finally {
-            btnEnviar.disabled = false;
-            btnEnviar.innerText = "CONFIRMAR INSCRIPCIÓN";
+            if (!document.getElementById('form-jugador').classList.contains('hidden')) {
+                btnEnviar.disabled = false;
+                btnEnviar.innerText = "CONFIRMAR INSCRIPCIÓN";
+            }
         }
     });
+
+    // Iniciar
+    validarAcceso();
 </script>
 </body>
 </html>
