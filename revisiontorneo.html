@@ -3,82 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Revisión y Clasificación</title>
+    <title>Revisión y Fase Final</title>
     <style>
-        :root { --primary: #1a73e8; --secondary: #d93025; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 8px; color: var(--primary); font-size: 1.2rem; }
+        :root { --primary: #1a73e8; --admin: #ef6c00; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 8px; color: var(--primary); font-size: 1.1rem; }
         
         /* Tablas */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px; border: 1px solid #eee; text-align: center; }
-        th { background: #f8f9fa; font-weight: bold; }
-        tr:nth-child(even) { background: #fcfcfc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 8px; border: 1px solid #eee; text-align: center; }
+        th { background: #f8f9fa; }
         
-        /* Clasificación por grupos */
-        .group-container { margin-bottom: 30px; }
-        .group-title { background: var(--primary); color: white; padding: 8px 15px; border-radius: 8px 8px 0 0; font-weight: bold; }
-        
-        /* Partidos */
-        .match-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
-        .match-row:last-child { border: none; }
-        .score-pill { background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 10px; font-weight: bold; font-family: monospace; }
-        .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
-        .status-done { background: #ceead6; color: #0d652d; }
-        .status-pending { background: #feefc3; color: #b05e00; }
+        /* Champion Box */
+        .champion-box { background: #fff7e0; border: 2px solid #fbc02d; padding: 20px; text-align: center; border-radius: 15px; margin-bottom: 20px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
+        .champion-name { color: #f57f17; font-size: 1.6rem; font-weight: bold; }
 
-        /* Campeón */
-        .champion-box { background: #fff7e0; border: 2px solid #fbc02d; padding: 20px; text-align: center; border-radius: 15px; margin-bottom: 20px; }
-        .champion-name { color: #f57f17; font-size: 1.5rem; font-weight: bold; display: block; }
+        /* Admin Section */
+        .admin-card { border: 2px solid var(--admin); background: #fff3e0; }
+        .admin-card h2 { color: var(--admin); border-color: var(--admin); }
+        .admin-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
         
-        /* Botones */
-        .btn-action { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .btn-action:hover { background: #1557b0; }
+        .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .status-ok { background: #ceead6; color: #0d652d; }
+        .status-wait { background: #feefc3; color: #b05e00; }
+        
+        .btn { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-admin { background: var(--admin); }
+        .btn-admin:hover { background: #e65100; }
+        .btn-admin:disabled { background: #ccc; }
+
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="campeon-view" class="champion-box hidden">
-        <span>🏆 CAMPEÓN DEL TORNEO 🏆</span>
+    <!-- BLOQUE CAMPEÓN -->
+    <div id="view-campeon" class="champion-box hidden">
+        <span style="font-size: 1.2rem;">🏆 CAMPEÓN DEL TORNEO 🏆</span><br>
         <span id="nombre-campeon" class="champion-name">---</span>
     </div>
 
     <div class="card">
-        <h2>🏓 Jugadores Registrados</h2>
-        <div id="lista-jugadores-info">Cargando...</div>
+        <h2 id="titulo-torneo">Cargando Torneo...</h2>
+        <div id="datos-jugadores" style="font-size: 0.8rem; color: #666;"></div>
     </div>
 
-    <div class="card">
-        <h2>📊 Clasificación por Grupos</h2>
-        <div id="tablas-grupos">Cargando clasificación...</div>
-    </div>
+    <!-- CLASIFICACIÓN -->
+    <div id="zona-tablas"></div>
 
-    <div class="card">
-        <h2>⏳ Partidos Pendientes</h2>
-        <div id="partidos-pendientes">Ninguno</div>
-        <div id="zona-generar-final" class="hidden">
-            <p style="font-size: 0.8rem; color: #666;">Fase de grupos terminada. Puedes generar la gran final entre los líderes.</p>
-            <button class="btn-action" onclick="generarFinal()">GENERAR GRAN FINAL</button>
+    <!-- ADMINISTRACIÓN (CERRAR GRUPOS / GENERAR COPA) -->
+    <div id="admin-panel" class="card admin-card hidden">
+        <h2>🛠 Administración: Generar Fase Eliminatoria</h2>
+        <div id="aviso-grupos-pendientes" style="color:red; font-size: 0.8rem; margin-bottom: 10px;">
+            ⚠️ Aún hay partidos de grupos sin resultado.
+        </div>
+        <div class="admin-form">
+            <label>Nº de jugadores clasificados para Copa:</label>
+            <select id="num-clasificados">
+                <option value="2">2 (Final Directa)</option>
+                <option value="4">4 (Semifinales)</option>
+                <option value="8">8 (Cuartos de Final)</option>
+            </select>
+            <label>
+                <input type="checkbox" id="check-consolacion"> ¿Crear también Copa de Consolación?
+            </label>
+            <p style="font-size: 0.75rem; color: #555;">
+                Nota: La Consolación usará el mismo número de jugadores (los siguientes clasificados).
+            </p>
+            <button id="btn-generar-copa" class="btn btn-admin">GENERAR CUADROS ELIMINATORIOS</button>
         </div>
     </div>
 
+    <!-- LISTA DE PARTIDOS -->
     <div class="card">
-        <h2>✅ Resultados Registrados</h2>
-        <div id="partidos-finalizados">Ninguno</div>
+        <h2>🎾 Partidos y Resultados</h2>
+        <div id="lista-partidos"></div>
     </div>
 
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
-    const HASH_REQUERIDO = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+    const HASH_ADMIN = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7";
+    const HASH_TORNEOS = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
 
     const params = new URLSearchParams(window.location.search);
     const t1 = params.get('token') || "";
+    const t2 = params.get('token2') || "";
     const idT = params.get('id_torneo');
 
-    let jugadoresMap = {};
-    let partidosData = [];
+    let jugadores = [];
+    let partidos = [];
+    let esAdmin = false;
+    let esLiga = false;
 
     async function sha256(txt) {
         const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
@@ -86,174 +103,180 @@
     }
 
     async function iniciar() {
-        if (await sha256(t1) !== HASH_REQUERIDO || !idT) {
-            document.body.innerHTML = "<h1 style='color:red; text-align:center;'>No autorizado</h1>";
+        const h1 = await sha256(t1);
+        const h2 = await sha256(t2);
+        
+        if (h1 !== HASH_TORNEOS) {
+            document.body.innerHTML = "<h1>No autorizado</h1>";
             return;
         }
+
+        if (h2 === HASH_ADMIN) {
+            esAdmin = true;
+            document.getElementById('admin-panel').classList.remove('hidden');
+        }
+
         cargarDatos();
     }
 
     async function cargarDatos() {
         try {
-            // 1. Cargar Jugadores
-            const resJ = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=jugadores&action=read&id_torneo=${idT}`);
-            const dataJ = await resJ.json();
-            const jugadores = dataJ.datos || [];
+            const [rJ, rP, rT] = await Promise.all([
+                fetch(`${SCRIPT_URL}?token=${t1}&hoja=jugadores&action=read&id_torneo=${idT}`),
+                fetch(`${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=read&id_torneo=${idT}`),
+                fetch(`${SCRIPT_URL}?token=${t1}&hoja=listatorneos&action=read&id_torneo=${idT}`)
+            ]);
+
+            const dJ = await rJ.json(); jugadores = dJ.datos || [];
+            const dP = await rP.json(); partidos = dP.datos || [];
+            const dT = await rT.json(); 
             
-            const divJ = document.getElementById('lista-jugadores-info');
-            divJ.innerHTML = jugadores.map(j => {
-                jugadoresMap[j.id_jugador] = j.nombre_jugador;
-                return `<b>${j.id_jugador}:</b> ${j.nombre_jugador} (${j.nivel})`;
-            }).join(' | ');
-
-            // 2. Cargar Partidos
-            const resP = await fetch(`${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=read&id_torneo=${idT}`);
-            const dataP = await resP.json();
-            partidosData = dataP.datos || [];
-
-            procesarTorneo();
-        } catch (e) { console.error(e); }
-    }
-
-    function procesarTorneo() {
-        const clasificacion = {}; // { grupo: { id_jugador: puntos } }
-        const pendientes = [];
-        const finalizados = [];
-        let finalTerminada = false;
-        let campeonID = null;
-
-        partidosData.forEach(p => {
-            const grupo = p.tipo_partido;
-            if (!clasificacion[grupo]) clasificacion[grupo] = {};
-            if (!clasificacion[grupo][p.id_jugador1]) clasificacion[grupo][p.id_jugador1] = 0;
-            if (!clasificacion[grupo][p.id_jugador2]) clasificacion[grupo][p.id_jugador2] = 0;
-
-            const games = [p.g1, p.g2, p.g3, p.g4, p.g5];
-            let jugados = false;
-            let j1_wins = 0;
-            let j2_wins = 0;
-
-            games.forEach(g => {
-                if (!g || g === "0-0" || g === 0) return;
-                jugados = true;
-                const scores = g.split(/\D/).map(Number); // Dividir por guion, espacio, etc.
-                if (scores.length === 2) {
-                    if (scores[0] > scores[1]) { j1_wins++; clasificacion[grupo][p.id_jugador1]++; }
-                    else if (scores[1] > scores[0]) { j2_wins++; clasificacion[grupo][p.id_jugador2]++; }
-                }
-            });
-
-            const pInfo = { ...p, j1_n: jugadoresMap[p.id_jugador1], j2_n: jugadoresMap[p.id_jugador2], res: games.filter(g => g && g !== "0-0").join(' | ') };
-
-            if (jugados) {
-                finalizados.push(pInfo);
-                if (grupo.toLowerCase().includes("final")) {
-                    finalTerminada = true;
-                    campeonID = (j1_wins > j2_wins) ? p.id_jugador1 : p.id_jugador2;
-                }
-            } else {
-                pendientes.push(pInfo);
+            const infoT = dT.datos ? dT.datos[0] : null;
+            if(infoT) {
+                document.getElementById('titulo-torneo').innerText = infoT.nombre_torneo;
+                esLiga = (infoT.tipo_torneo === "Liga");
             }
-        });
 
-        renderClasificacion(clasificacion);
-        renderPartidos(pendientes, finalizados);
-        verificarFases(clasificacion, pendientes, finalTerminada, campeonID);
+            procesar();
+        } catch (e) { alert("Error al cargar datos"); }
     }
 
-    function renderClasificacion(clas) {
-        const container = document.getElementById('tablas-grupos');
-        container.innerHTML = "";
-        
-        Object.keys(clas).sort().forEach(grupo => {
-            let html = `<div class="group-container"><div class="group-title">${grupo}</div><table><tr><th>Jugador</th><th>Juegos Ganados (Pts)</th></tr>`;
+    function procesar() {
+        const stats = {}; // id_jugador -> {pts, pj, nombre}
+        const grupos = {}; // nombre_grupo -> [ids]
+        let partidosPendientesGrupos = 0;
+        let partidosFaseFinal = [];
+
+        jugadores.forEach(j => stats[j.id_jugador] = {pts: 0, pj: 0, nombre: j.nombre_jugador});
+
+        partidos.forEach(p => {
+            const tipo = p.tipo_partido.toLowerCase();
+            const esDeGrupos = tipo.includes("grupo") || tipo.includes("liga");
             
-            const listaSorteada = Object.entries(clas[grupo]).sort((a, b) => b[1] - a[1]);
-            
-            listaSorteada.forEach(([id, pts]) => {
-                html += `<tr><td>${jugadoresMap[id]}</td><td><b>${pts}</b></td></tr>`;
+            if(!grupos[p.tipo_partido]) grupos[p.tipo_partido] = new Set();
+            grupos[p.tipo_partido].add(p.id_jugador1);
+            grupos[p.tipo_partido].add(p.id_jugador2);
+
+            let setsJ1 = 0, setsJ2 = 0, jugado = false;
+            [p.g1, p.g2, p.g3, p.g4, p.g5].forEach(g => {
+                if(!g || g === "0-0") return;
+                jugado = true;
+                const s = g.split(/\D/).map(Number);
+                if(s[0] > s[1]) setsJ1++; else if(s[1] > s[0]) setsJ2++;
             });
-            html += `</table></div>`;
-            container.innerHTML += html;
+
+            if(jugado) {
+                stats[p.id_jugador1].pts += setsJ1;
+                stats[p.id_jugador1].pj++;
+                stats[p.id_jugador2].pts += setsJ2;
+                stats[p.id_jugador2].pj++;
+            } else if(esDeGrupos) {
+                partidosPendientesGrupos++;
+            }
+            
+            if(!esDeGrupos) partidosFaseFinal.push({p, j1_wins: setsJ1, j2_wins: setsJ2, jugado});
+        });
+
+        renderTablas(grupos, stats);
+        renderPartidos(partidos, stats);
+
+        // LÓGICA LIGA (Campeón)
+        if(esLiga && partidos.length > 0 && partidosPendientesGrupos === 0) {
+            const lider = Object.values(stats).sort((a,b) => b.pts - a.pts)[0];
+            document.getElementById('view-campeon').classList.remove('hidden');
+            document.getElementById('nombre-campeon').innerText = lider.nombre;
+        }
+
+        // LÓGICA ADMIN
+        if(esAdmin && !esLiga) {
+            if(partidosPendientesGrupos === 0) document.getElementById('aviso-grupos-pendientes').classList.add('hidden');
+        }
+
+        // LÓGICA CAMPEÓN COPA
+        const final = partidosFaseFinal.find(pf => pf.p.id_partido.includes("FINAL-01") && !pf.p.id_partido.includes("CONS"));
+        if(final && final.jugado) {
+            const ganador = (final.j1_wins > final.j2_wins) ? stats[final.p.id_jugador1].nombre : stats[final.p.id_jugador2].nombre;
+            document.getElementById('view-campeon').classList.remove('hidden');
+            document.getElementById('nombre-campeon').innerText = ganador;
+        }
+    }
+
+    function renderTablas(grupos, stats) {
+        const zona = document.getElementById('zona-tablas');
+        zona.innerHTML = "";
+        Object.keys(grupos).sort().forEach(gName => {
+            let html = `<div class="card"><h3>${gName}</h3><table><tr><th>Jugador</th><th>PJ</th><th>Pts (Sets)</th></tr>`;
+            const sortedIds = Array.from(grupos[gName]).sort((a,b) => stats[b].pts - stats[a].pts);
+            sortedIds.forEach(id => {
+                html += `<tr><td>${stats[id].nombre}</td><td>${stats[id].pj}</td><td><b>${stats[id].pts}</b></td></tr>`;
+            });
+            zona.innerHTML += html + `</table></div>`;
         });
     }
 
-    function renderPartidos(pendientes, finalizados) {
-        const divP = document.getElementById('partidos-pendientes');
-        const divF = document.getElementById('partidos-finalizados');
-
-        divP.innerHTML = pendientes.length ? pendientes.map(p => `
-            <div class="match-row">
-                <span>${p.tipo_partido} - <b>${p.id_partido}</b></span>
-                <span>${p.j1_n} vs ${p.j2_n}</span>
-                <span class="status-badge status-pending">Pendiente</span>
-            </div>
-        `).join('') : "Todos los partidos disputados.";
-
-        divF.innerHTML = finalizados.length ? finalizados.map(p => `
-            <div class="match-row">
-                <span><b>${p.id_partido}</b></span>
-                <span>${p.j1_n} vs ${p.j2_n}</span>
-                <span class="score-pill">${p.res}</span>
-            </div>
-        `).join('') : "No hay resultados registrados.";
+    function renderPartidos(list, stats) {
+        const zona = document.getElementById('lista-partidos');
+        zona.innerHTML = list.map(p => {
+            const sets = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s!=="0-0").join(" | ");
+            const status = sets ? `<span class="status-badge status-ok">OK</span>` : `<span class="status-badge status-wait">PTE</span>`;
+            return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.8rem;">
+                ${status} <b>${p.id_partido}</b> (${p.tipo_partido}): ${stats[p.id_jugador1].nombre} vs ${stats[p.id_jugador2].nombre} 
+                <div style="color:var(--primary); font-family:monospace;">${sets}</div>
+            </div>`;
+        }).join("");
     }
 
-    function verificarFases(clas, pendientes, finalTerminada, campeonID) {
-        // 1. Mostrar Campeón
-        if (finalTerminada && campeonID) {
-            document.getElementById('campeon-view').classList.remove('hidden');
-            document.getElementById('nombre-campeon').innerText = jugadoresMap[campeonID];
+    // GENERACIÓN DE FASE ELIMINATORIA (COPA)
+    document.getElementById('btn-generar-copa').addEventListener('click', async () => {
+        const numQ = parseInt(document.getElementById('num-clasificados').value);
+        const conConsolacion = document.getElementById('check-consolacion').checked;
+        
+        // 1. Obtener Ranking Global de grupos
+        const ranking = Object.keys(stats).map(id => ({id, pts: stats[id].pts}))
+                        .sort((a,b) => b.pts - a.pts);
+
+        if(ranking.length < numQ) return alert("No hay suficientes jugadores");
+
+        const clasificadosCopa = ranking.slice(0, numQ);
+        const clasificadosCons = conConsolacion ? ranking.slice(numQ, numQ * 2) : [];
+
+        if(conConsolacion && ranking.length < (numQ * 2)) {
+            return alert("No hay suficientes jugadores para consolación (" + (numQ*2) + " requeridos)");
         }
 
-        // 2. Verificar si se puede generar final
-        // Solo si hay grupos, no hay pendientes de grupos y no existe ya un partido tipo "Final"
-        const tieneGrupos = Object.keys(clas).some(k => k.toLowerCase().includes("grupo"));
-        const hayFinalGenerada = partidosData.some(p => p.tipo_partido.toLowerCase().includes("final"));
-        const gruposPendientes = pendientes.some(p => p.tipo_partido.toLowerCase().includes("grupo"));
+        if(!confirm(`Se generará una Copa para ${numQ} jugadores ${conConsolacion ? 'y Consolación' : ''}. ¿Continuar?`)) return;
 
-        if (tieneGrupos && !gruposPendientes && !hayFinalGenerada) {
-            document.getElementById('zona-generar-final').classList.remove('hidden');
-        }
-    }
-
-    async function generarFinal() {
-        const btn = document.querySelector('.btn-action');
+        const btn = document.getElementById('btn-generar-copa');
         btn.disabled = true;
-        btn.innerText = "Generando...";
 
-        // Obtener líderes de cada grupo (asumiendo 2 grupos para una final)
-        // Buscamos los que tienen más puntos en "Grupo 1" y "Grupo 2"
-        const grupos = {};
-        partidosData.forEach(p => {
-            if (p.tipo_partido.toLowerCase().includes("grupo")) {
-                const g = p.tipo_partido;
-                if (!grupos[g]) grupos[g] = {};
-                // Repetimos lógica de puntos para asegurar
-                const games = [p.g1, p.g2, p.g3, p.g4, p.g5];
-                games.forEach(game => {
-                    if (!game || game === "0-0") return;
-                    const sc = game.split(/\D/).map(Number);
-                    if (sc[0] > sc[1]) grupos[g][p.id_jugador1] = (grupos[g][p.id_jugador1] || 0) + 1;
-                    else if (sc[1] > sc[0]) grupos[g][p.id_jugador2] = (grupos[g][p.id_jugador2] || 0) + 1;
+        // Función para crear enfrentamientos eliminatorios
+        async function crearCuadro(lista, prefijo) {
+            const n = lista.length;
+            let matches = [];
+            // Emparejamiento: 1º vs Ultimo, 2º vs Penúltimo...
+            for(let i=0; i < n/2; i++) {
+                const j1 = lista[i];
+                const j2 = lista[n - 1 - i];
+                const fase = n === 8 ? "CUARTOS" : (n === 4 ? "SEMIS" : "FINAL");
+                matches.push({
+                    id: `${prefijo}-${fase}-0${i+1}`,
+                    tipo: `${prefijo} ${fase}`,
+                    j1: j1.id,
+                    j2: j2.id
                 });
             }
-        });
+            for(let m of matches) {
+                const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=${m.id}&tipo_partido=${encodeURIComponent(m.tipo)}&id_jugador1=${m.j1}&id_jugador2=${m.j2}`;
+                await fetch(url);
+            }
+        }
 
-        const lideres = Object.keys(grupos).sort().map(g => {
-            return Object.entries(grupos[g]).sort((a,b) => b[1] - a[1])[0][0];
-        });
+        await crearCuadro(clasificadosCopa, "COPA");
+        if(conConsolacion) await crearCuadro(clasificadosCons, "CONSOLACION");
 
-        if (lideres.length < 2) return alert("No se pueden determinar 2 líderes.");
-
-        const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=FINAL-01&tipo_partido=GRAN FINAL&id_jugador1=${lideres[0]}&id_jugador2=${lideres[1]}`;
-        
-        try {
-            await fetch(url);
-            alert("¡Gran Final generada!");
-            location.reload();
-        } catch (e) { alert("Error al generar final"); btn.disabled = false; }
-    }
+        alert("Fases eliminatorias generadas.");
+        location.reload();
+    });
 
     iniciar();
 </script>
