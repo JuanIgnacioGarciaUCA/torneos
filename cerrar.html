@@ -33,20 +33,27 @@
 
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
-    const HASH2 = "e290f84897f21e89f899e1599818815124b898a129ef999810565863c0f4f56f"; // admin1
+    const HASH1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1"; // torneos_jigg
+    const HASH2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7"; // admin1
     
     const params = new URLSearchParams(window.location.search);
-    const t1 = params.get('token');
-    const t2 = params.get('token2');
+    const t1 = params.get('token') || "";
+    const t2 = params.get('token2') || "";
     const idT = params.get('id_torneo');
 
     let jugadores = [];
+    
+    async function sha256(txt) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     async function validar() {
-        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t2));
-        const h = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-        if (h !== HASH2) { document.body.innerHTML = "<h1>No autorizado</h1>"; return; }
-        cargarJugadores();
+        if (await sha256(t1) === HASH1 && await sha256(t2) === HASH2) {
+            cargarJugadores();
+        } else {
+            document.body.innerHTML = "<h1>No autorizado</h1>";
+        }   
     }
     validar();
 
