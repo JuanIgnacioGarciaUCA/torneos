@@ -3,89 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Revisión y Fase Final</title>
+    <title>Revisión de Torneo y Clasificación</title>
     <style>
         :root { --primary: #1a73e8; --admin: #ef6c00; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
         h2 { border-bottom: 2px solid var(--primary); padding-bottom: 8px; color: var(--primary); font-size: 1.1rem; }
         
-        /* Tablas */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
         th, td { padding: 8px; border: 1px solid #eee; text-align: center; }
         th { background: #f8f9fa; }
-        
-        /* Champion Box */
-        .champion-box { background: #fff7e0; border: 2px solid #fbc02d; padding: 20px; text-align: center; border-radius: 15px; margin-bottom: 20px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
-        .champion-name { color: #f57f17; font-size: 1.6rem; font-weight: bold; }
 
-        /* Admin Section */
+        /* Bloque Admin */
         .admin-card { border: 2px solid var(--admin); background: #fff3e0; }
         .admin-card h2 { color: var(--admin); border-color: var(--admin); }
-        .admin-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .admin-form { display: flex; flex-direction: column; gap: 15px; margin-top: 10px; }
+        .admin-form label { font-size: 0.9rem; font-weight: bold; }
         
-        .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-        .status-ok { background: #ceead6; color: #0d652d; }
-        .status-wait { background: #feefc3; color: #b05e00; }
-        
-        .btn { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
-        .btn-admin { background: var(--admin); }
+        .champion-box { background: #fff7e0; border: 2px solid #fbc02d; padding: 20px; text-align: center; border-radius: 15px; margin-bottom: 20px; }
+        .champion-name { color: #f57f17; font-size: 1.6rem; font-weight: bold; }
+
+        .btn-admin { background: var(--admin); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-admin:hover { background: #e65100; }
         .btn-admin:disabled { background: #ccc; }
+
+        .status-badge { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+        .status-ok { background: #ceead6; color: #0d652d; }
+        .status-wait { background: #feefc3; color: #b05e00; }
 
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <!-- BLOQUE CAMPEÓN -->
+    <!-- CAMPEÓN -->
     <div id="view-campeon" class="champion-box hidden">
-        <span style="font-size: 1.2rem;">🏆 CAMPEÓN DEL TORNEO 🏆</span><br>
+        <span>🏆 CAMPEÓN DEL TORNEO 🏆</span><br>
         <span id="nombre-campeon" class="champion-name">---</span>
     </div>
 
+    <!-- INFO TORNEO -->
     <div class="card">
-        <h2 id="titulo-torneo">Cargando Torneo...</h2>
-        <div id="datos-jugadores" style="font-size: 0.8rem; color: #666;"></div>
+        <h2 id="titulo-torneo">Cargando...</h2>
+        <div id="info-status" style="font-size: 0.8rem; color: #666;"></div>
     </div>
 
     <!-- CLASIFICACIÓN -->
     <div id="zona-tablas"></div>
 
-    <!-- ADMINISTRACIÓN (CERRAR GRUPOS / GENERAR COPA) -->
+    <!-- PANEL ADMINISTRACIÓN -->
     <div id="admin-panel" class="card admin-card hidden">
-        <h2>🛠 Administración: Generar Fase Eliminatoria</h2>
-        <div id="aviso-grupos-pendientes" style="color:red; font-size: 0.8rem; margin-bottom: 10px;">
-            ⚠️ Aún hay partidos de grupos sin resultado.
+        <h2>🛠 Configuración Fase Final (Admin)</h2>
+        <div id="aviso-pendiente" style="color:red; font-size: 0.8rem; margin-bottom: 10px;">
+            ⚠️ Aviso: Hay partidos de grupos pendientes de resultado.
         </div>
         <div class="admin-form">
-            <label>Nº de jugadores clasificados para Copa:</label>
-            <select id="num-clasificados">
-                <option value="2">2 (Final Directa)</option>
-                <option value="4">4 (Semifinales)</option>
-                <option value="8">8 (Cuartos de Final)</option>
-            </select>
-            <label>
-                <input type="checkbox" id="check-consolacion"> ¿Crear también Copa de Consolación?
-            </label>
-            <p style="font-size: 0.75rem; color: #555;">
-                Nota: La Consolación usará el mismo número de jugadores (los siguientes clasificados).
-            </p>
-            <button id="btn-generar-copa" class="btn btn-admin">GENERAR CUADROS ELIMINATORIOS</button>
+            <div>
+                <label>Jugadores para COPA PRINCIPAL:</label>
+                <select id="num-copa">
+                    <option value="0">Ninguno</option>
+                    <option value="2">2 (Final Directa)</option>
+                    <option value="4">4 (Semifinales)</option>
+                    <option value="8">8 (Cuartos)</option>
+                </select>
+            </div>
+
+            <div>
+                <label>¿Jugar COPA DE CONSOLACIÓN?</label>
+                <input type="checkbox" id="check-cons" onchange="document.getElementById('div-cons').classList.toggle('hidden')">
+            </div>
+
+            <div id="div-cons" class="hidden">
+                <label>Jugadores para CONSOLACIÓN:</label>
+                <select id="num-cons">
+                    <option value="2">2 (Final Directa)</option>
+                    <option value="4">4 (Semifinales)</option>
+                    <option value="8">8 (Cuartos)</option>
+                </select>
+            </div>
+
+            <button id="btn-generar" class="btn-admin">GENERAR PARTIDOS FASE FINAL</button>
         </div>
     </div>
 
-    <!-- LISTA DE PARTIDOS -->
+    <!-- PARTIDOS -->
     <div class="card">
-        <h2>🎾 Partidos y Resultados</h2>
-        <div id="lista-partidos"></div>
+        <h2>🎾 Resultados de Partidos</h2>
+        <div id="lista-partidos">Cargando...</div>
     </div>
 
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziaDCB98riN6FMCx6MVyIb_8houk024EIGvarWlksv_hTUmaezhOyKRp58gAOWAjgD1w/exec";
-    const HASH_ADMIN = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7";
-    const HASH_TORNEOS = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+    const HASH_ADMIN_REQ = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7";
+    const HASH_T1_REQ = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
 
     const params = new URLSearchParams(window.location.search);
     const t1 = params.get('token') || "";
@@ -94,25 +104,24 @@
 
     let jugadores = [];
     let partidos = [];
-    let esAdmin = false;
+    let stats = {}; // id_j -> {pts, pj, nombre}
     let esLiga = false;
 
     async function sha256(txt) {
+        if (!txt) return "";
         const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
         return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
     async function iniciar() {
         const h1 = await sha256(t1);
-        const h2 = await sha256(t2);
-        
-        if (h1 !== HASH_TORNEOS) {
+        if (h1 !== HASH_T1_REQ) {
             document.body.innerHTML = "<h1>No autorizado</h1>";
             return;
         }
 
-        if (h2 === HASH_ADMIN) {
-            esAdmin = true;
+        const h2 = await sha256(t2);
+        if (h2 === HASH_ADMIN_REQ) {
             document.getElementById('admin-panel').classList.remove('hidden');
         }
 
@@ -126,155 +135,144 @@
                 fetch(`${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=read&id_torneo=${idT}`),
                 fetch(`${SCRIPT_URL}?token=${t1}&hoja=listatorneos&action=read&id_torneo=${idT}`)
             ]);
-
-            const dJ = await rJ.json(); jugadores = dJ.datos || [];
-            const dP = await rP.json(); partidos = dP.datos || [];
-            const dT = await rT.json(); 
+            jugadores = (await rJ.json()).datos || [];
+            partidos = (await rP.json()).datos || [];
+            const torneoInfo = (await rT.json()).datos[0];
             
-            const infoT = dT.datos ? dT.datos[0] : null;
-            if(infoT) {
-                document.getElementById('titulo-torneo').innerText = infoT.nombre_torneo;
-                esLiga = (infoT.tipo_torneo === "Liga");
+            if (torneoInfo) {
+                document.getElementById('titulo-torneo').innerText = torneoInfo.nombre_torneo;
+                esLiga = (torneoInfo.tipo_torneo === "Liga");
             }
 
-            procesar();
+            procesarYRenderizar();
         } catch (e) { alert("Error al cargar datos"); }
     }
 
-    function procesar() {
-        const stats = {}; // id_jugador -> {pts, pj, nombre}
-        const grupos = {}; // nombre_grupo -> [ids]
-        let partidosPendientesGrupos = 0;
-        let partidosFaseFinal = [];
+    function procesarYRenderizar() {
+        stats = {};
+        const grupos = {};
+        let pendientesGrupos = 0;
+        let finalTerminada = false;
+        let ganadorFinal = null;
 
         jugadores.forEach(j => stats[j.id_jugador] = {pts: 0, pj: 0, nombre: j.nombre_jugador});
 
         partidos.forEach(p => {
-            const tipo = p.tipo_partido.toLowerCase();
-            const esDeGrupos = tipo.includes("grupo") || tipo.includes("liga");
+            const esG = p.tipo_partido.toLowerCase().includes("grupo") || p.tipo_partido.toLowerCase().includes("liga");
             
             if(!grupos[p.tipo_partido]) grupos[p.tipo_partido] = new Set();
             grupos[p.tipo_partido].add(p.id_jugador1);
             grupos[p.tipo_partido].add(p.id_jugador2);
 
-            let setsJ1 = 0, setsJ2 = 0, jugado = false;
+            let s1 = 0, s2 = 0, jugado = false;
             [p.g1, p.g2, p.g3, p.g4, p.g5].forEach(g => {
                 if(!g || g === "0-0") return;
                 jugado = true;
-                const s = g.split(/\D/).map(Number);
-                if(s[0] > s[1]) setsJ1++; else if(s[1] > s[0]) setsJ2++;
+                const sc = g.split(/\D/).map(Number);
+                if(sc[0] > sc[1]) s1++; else if(sc[1] > sc[0]) s2++;
             });
 
-            if(jugado) {
-                stats[p.id_jugador1].pts += setsJ1;
-                stats[p.id_jugador1].pj++;
-                stats[p.id_jugador2].pts += setsJ2;
-                stats[p.id_jugador2].pj++;
-            } else if(esDeGrupos) {
-                partidosPendientesGrupos++;
+            if (jugado) {
+                stats[p.id_jugador1].pts += s1; stats[p.id_jugador1].pj++;
+                stats[p.id_jugador2].pts += s2; stats[p.id_jugador2].pj++;
+                
+                // Detectar si es la Gran Final
+                if (p.id_partido.includes("COPA-FINAL-01")) {
+                    finalTerminada = true;
+                    ganadorFinal = s1 > s2 ? p.id_jugador1 : p.id_jugador2;
+                }
+            } else if (esG) {
+                pendientesGrupos++;
             }
-            
-            if(!esDeGrupos) partidosFaseFinal.push({p, j1_wins: setsJ1, j2_wins: setsJ2, jugado});
         });
 
-        renderTablas(grupos, stats);
-        renderPartidos(partidos, stats);
+        if (pendientesGrupos === 0) document.getElementById('aviso-pendiente').classList.add('hidden');
 
-        // LÓGICA LIGA (Campeón)
-        if(esLiga && partidos.length > 0 && partidosPendientesGrupos === 0) {
-            const lider = Object.values(stats).sort((a,b) => b.pts - a.pts)[0];
+        renderTablas(grupos);
+        renderPartidos();
+
+        // Lógica campeón liga
+        if (esLiga && pendientesGrupos === 0 && partidos.length > 0) {
+            const ranking = Object.values(stats).sort((a,b) => b.pts - a.pts);
             document.getElementById('view-campeon').classList.remove('hidden');
-            document.getElementById('nombre-campeon').innerText = lider.nombre;
-        }
-
-        // LÓGICA ADMIN
-        if(esAdmin && !esLiga) {
-            if(partidosPendientesGrupos === 0) document.getElementById('aviso-grupos-pendientes').classList.add('hidden');
-        }
-
-        // LÓGICA CAMPEÓN COPA
-        const final = partidosFaseFinal.find(pf => pf.p.id_partido.includes("FINAL-01") && !pf.p.id_partido.includes("CONS"));
-        if(final && final.jugado) {
-            const ganador = (final.j1_wins > final.j2_wins) ? stats[final.p.id_jugador1].nombre : stats[final.p.id_jugador2].nombre;
+            document.getElementById('nombre-campeon').innerText = ranking[0].nombre;
+        } else if (finalTerminada) {
             document.getElementById('view-campeon').classList.remove('hidden');
-            document.getElementById('nombre-campeon').innerText = ganador;
+            document.getElementById('nombre-campeon').innerText = stats[ganadorFinal].nombre;
         }
     }
 
-    function renderTablas(grupos, stats) {
+    function renderTablas(grupos) {
         const zona = document.getElementById('zona-tablas');
         zona.innerHTML = "";
-        Object.keys(grupos).sort().forEach(gName => {
-            let html = `<div class="card"><h3>${gName}</h3><table><tr><th>Jugador</th><th>PJ</th><th>Pts (Sets)</th></tr>`;
-            const sortedIds = Array.from(grupos[gName]).sort((a,b) => stats[b].pts - stats[a].pts);
-            sortedIds.forEach(id => {
-                html += `<tr><td>${stats[id].nombre}</td><td>${stats[id].pj}</td><td><b>${stats[id].pts}</b></td></tr>`;
+        Object.keys(grupos).sort().forEach(gn => {
+            let h = `<div class="card"><h3>${gn}</h3><table><tr><th>Jugador</th><th>PJ</th><th>Sets</th></tr>`;
+            const sIds = Array.from(grupos[gn]).sort((a,b) => stats[b].pts - stats[a].pts);
+            sIds.forEach(id => {
+                h += `<tr><td>${stats[id].nombre}</td><td>${stats[id].pj}</td><td><b>${stats[id].pts}</b></td></tr>`;
             });
-            zona.innerHTML += html + `</table></div>`;
+            zona.innerHTML += h + `</table></div>`;
         });
     }
 
-    function renderPartidos(list, stats) {
+    function renderPartidos() {
         const zona = document.getElementById('lista-partidos');
-        zona.innerHTML = list.map(p => {
-            const sets = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s!=="0-0").join(" | ");
-            const status = sets ? `<span class="status-badge status-ok">OK</span>` : `<span class="status-badge status-wait">PTE</span>`;
-            return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.8rem;">
-                ${status} <b>${p.id_partido}</b> (${p.tipo_partido}): ${stats[p.id_jugador1].nombre} vs ${stats[p.id_jugador2].nombre} 
-                <div style="color:var(--primary); font-family:monospace;">${sets}</div>
+        zona.innerHTML = partidos.map(p => {
+            const res = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(x => x && x!=="0-0").join(" | ");
+            const badge = res ? `<span class="status-badge status-ok">OK</span>` : `<span class="status-badge status-wait">PTE</span>`;
+            return `<div style="padding:6px; border-bottom:1px solid #eee; font-size:0.8rem;">
+                ${badge} <b>${p.id_partido}</b> (${p.tipo_partido})<br>
+                ${stats[p.id_jugador1].nombre} vs ${stats[p.id_jugador2].nombre}
+                <div style="color:var(--primary); font-family:monospace;">${res}</div>
             </div>`;
         }).join("");
     }
 
-    // GENERACIÓN DE FASE ELIMINATORIA (COPA)
-    document.getElementById('btn-generar-copa').addEventListener('click', async () => {
-        const numQ = parseInt(document.getElementById('num-clasificados').value);
-        const conConsolacion = document.getElementById('check-consolacion').checked;
-        
-        // 1. Obtener Ranking Global de grupos
+    // BOTÓN ADMIN: GENERAR COPA
+    document.getElementById('btn-generar').addEventListener('click', async () => {
+        const nCopa = parseInt(document.getElementById('num-copa').value);
+        const qCons = document.getElementById('check-cons').checked;
+        const nCons = qCons ? parseInt(document.getElementById('num-cons').value) : 0;
+
         const ranking = Object.keys(stats).map(id => ({id, pts: stats[id].pts}))
                         .sort((a,b) => b.pts - a.pts);
 
-        if(ranking.length < numQ) return alert("No hay suficientes jugadores");
-
-        const clasificadosCopa = ranking.slice(0, numQ);
-        const clasificadosCons = conConsolacion ? ranking.slice(numQ, numQ * 2) : [];
-
-        if(conConsolacion && ranking.length < (numQ * 2)) {
-            return alert("No hay suficientes jugadores para consolación (" + (numQ*2) + " requeridos)");
+        if (ranking.length < (nCopa + nCons)) {
+            return alert(`No hay suficientes jugadores (${ranking.length}) para clasificar a tantos.`);
         }
 
-        if(!confirm(`Se generará una Copa para ${numQ} jugadores ${conConsolacion ? 'y Consolación' : ''}. ¿Continuar?`)) return;
+        if (!confirm(`Se generará Copa (${nCopa}) y Consolación (${nCons}). ¿Confirmar?`)) return;
 
-        const btn = document.getElementById('btn-generar-copa');
+        const btn = document.getElementById('btn-generar');
         btn.disabled = true;
 
-        // Función para crear enfrentamientos eliminatorios
-        async function crearCuadro(lista, prefijo) {
+        async function crearFase(lista, prefijo) {
             const n = lista.length;
+            if (n < 2) return;
             let matches = [];
-            // Emparejamiento: 1º vs Ultimo, 2º vs Penúltimo...
-            for(let i=0; i < n/2; i++) {
-                const j1 = lista[i];
-                const j2 = lista[n - 1 - i];
+            // Emparejamiento 1º vs Ultimo
+            for (let i = 0; i < n/2; i++) {
                 const fase = n === 8 ? "CUARTOS" : (n === 4 ? "SEMIS" : "FINAL");
                 matches.push({
                     id: `${prefijo}-${fase}-0${i+1}`,
                     tipo: `${prefijo} ${fase}`,
-                    j1: j1.id,
-                    j2: j2.id
+                    j1: lista[i].id,
+                    j2: lista[n-1-i].id
                 });
             }
-            for(let m of matches) {
+            for (let m of matches) {
                 const url = `${SCRIPT_URL}?token=${t1}&hoja=lista_partidos&action=write&id_torneo=${idT}&id_partido=${m.id}&tipo_partido=${encodeURIComponent(m.tipo)}&id_jugador1=${m.j1}&id_jugador2=${m.j2}`;
                 await fetch(url);
             }
         }
 
-        await crearCuadro(clasificadosCopa, "COPA");
-        if(conConsolacion) await crearCuadro(clasificadosCons, "CONSOLACION");
+        const clasCopa = ranking.slice(0, nCopa);
+        const clasCons = ranking.slice(nCopa, nCopa + nCons);
 
-        alert("Fases eliminatorias generadas.");
+        await crearFase(clasCopa, "COPA");
+        await crearFase(clasCons, "CONS");
+
+        alert("Fases generadas con éxito.");
         location.reload();
     });
 
