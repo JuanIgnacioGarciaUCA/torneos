@@ -2,80 +2,181 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultados de Partidos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Resultados - Torneo</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
-        h2 { color: #d93025; text-align: center; margin-top: 0; }
-        
-        .info-header { background: #feede8; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; border: 1px solid #fadbd8; }
-        
-        .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .list-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px; max-height: 150px; overflow-y: auto; font-size: 0.85em; }
-        .list-box h4 { margin: 0 0 8px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+        :root {
+            --primary: #d93025;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --text: #3c4043;
+        }
 
-        form { background: #fff; border: 2px solid #d93025; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; gap: 15px; }
-        .form-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-weight: bold; color: #444; font-size: 0.9em; }
-        
-        input { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
-        .match-input { font-family: monospace; font-weight: bold; text-transform: uppercase; background: #fffde7; }
-        
-        .games-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-        .game-input { text-align: center; font-size: 0.9em; }
-        .help-text { font-size: 0.75em; color: #666; font-style: italic; margin-top: -10px; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            margin: 0; 
+            display: flex; 
+            justify-content: center;
+        }
 
-        button { background-color: #d93025; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1em; transition: 0.3s; }
-        button:hover { background-color: #b3261e; }
-        button:disabled { background-color: #ccc; }
+        .container { 
+            width: 100%; 
+            max-width: 500px; 
+            padding: 15px;
+            box-sizing: border-box;
+        }
 
-        .error-msg { color: #d93025; text-align: center; font-weight: bold; padding: 20px; }
+        .header-card {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(217, 48, 37, 0.2);
+        }
+
+        h2 { margin: 0; font-size: 1.4rem; }
+        #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
+
+        /* Paneles de información (Jugadores y Partidos) */
+        .info-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto; /* Scroll lateral en móviles pequeños */
+            padding-bottom: 10px;
+        }
+
+        .list-box {
+            flex: 0 0 75%; /* Cada caja ocupa el 75% del ancho para invitar a deslizar */
+            background: var(--card);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            max-height: 180px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+
+        .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; }
+
+        /* Formulario */
+        .form-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+        }
+
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 16px; /* Evita zoom en iOS */
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input:focus { border-color: var(--primary); outline: none; }
+
+        .id-input { 
+            font-family: 'Courier New', monospace; 
+            text-transform: uppercase; 
+            background: #fff8f7;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        /* Rejilla de Games */
+        .games-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 arriba, 2 abajo */
+            gap: 10px;
+        }
+        .games-container input:nth-child(4), 
+        .games-container input:nth-child(5) {
+            grid-column: span 1;
+        }
+
+        .help-text { font-size: 0.75rem; color: #70757a; margin-bottom: 10px; display: block; }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(217, 48, 37, 0.3);
+            margin-top: 10px;
+        }
+
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #dadce0; box-shadow: none; }
+
+        .error-view { text-align: center; padding: 40px 20px; color: var(--primary); }
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="contenido">
+<div class="container" id="main-view">
+    <div class="header-card">
         <h2>Registrar Resultado</h2>
-        <div id="info" class="info-header">Cargando datos del torneo...</div>
+        <div id="info">Sincronizando...</div>
+    </div>
 
-        <!-- Listas informativas -->
-        <div class="grid-info">
-            <div class="list-box">
-                <h4>🏓 Jugadores</h4>
-                <div id="lista-jugadores">Cargando...</div>
-            </div>
-            <div class="list-box">
-                <h4>📅 Partidos Generados</h4>
-                <div id="lista-partidos">Cargando...</div>
-            </div>
+    <!-- Paneles de referencia -->
+    <div class="info-panel">
+        <div class="list-box">
+            <h4>🏓 Jugadores</h4>
+            <div id="lista-jugadores">Cargando...</div>
         </div>
+        <div class="list-box">
+            <h4>📅 Partidos</h4>
+            <div id="lista-partidos">Cargando...</div>
+        </div>
+    </div>
 
-        <!-- Formulario simplificado -->
+    <!-- Formulario -->
+    <div class="form-card">
         <form id="form-resultado">
             <div class="form-group">
-                <label>Código del Partido (ID):</label>
-                <input type="text" id="id_partido" class="match-input" placeholder="Ej: G1-P1" required>
+                <label>Código del Partido:</label>
+                <input type="text" id="id_partido" class="id-input" placeholder="EJ: G1-P1" required autofocus>
             </div>
 
             <div class="form-group">
-                <label>Resultados por Set (Game 1 al 5):</label>
-                <p class="help-text">Formato: "11-5", "11 9", "11/7"...</p>
-                <div class="games-grid">
-                    <input type="text" id="g1" class="game-input" placeholder="G1" pattern=".*\D.*">
-                    <input type="text" id="g2" class="game-input" placeholder="G2">
-                    <input type="text" id="g3" class="game-input" placeholder="G3">
-                    <input type="text" id="g4" class="game-input" placeholder="G4">
-                    <input type="text" id="g5" class="game-input" placeholder="G5">
+                <label>Resultados por Set:</label>
+                <span class="help-text">Usa guion o espacio (ej: 11-5)</span>
+                <div class="games-container">
+                    <input type="text" id="g1" placeholder="Set 1">
+                    <input type="text" id="g2" placeholder="Set 2">
+                    <input type="text" id="g3" placeholder="Set 3">
+                    <input type="text" id="g4" placeholder="Set 4">
+                    <input type="text" id="g5" placeholder="Set 5">
                 </div>
             </div>
 
-            <button type="submit" id="btn-enviar">ACTUALIZAR RESULTADO</button>
+            <button type="submit" id="btn-enviar">GUARDAR CAMBIOS</button>
         </form>
     </div>
-    <div id="error-auth" class="error-msg hidden">⚠️ Acceso No Autorizado</div>
+</div>
+
+<div id="error-auth" class="error-view hidden">
+    <h3>⚠️ Acceso Denegado</h3>
+    <p>Token o ID de torneo no válidos.</p>
 </div>
 
 <script>
@@ -96,107 +197,75 @@
 
     async function iniciar() {
         if (await sha256(token) !== HASH_REQUERIDO || !idTorneo) {
-            document.getElementById('contenido').classList.add('hidden');
+            document.getElementById('main-view').classList.add('hidden');
             document.getElementById('error-auth').classList.remove('hidden');
             return;
         }
-        document.getElementById('info').innerText = "Torneo ID: " + idTorneo;
+        document.getElementById('info').innerText = "Torneo: " + idTorneo;
         cargarDatos();
     }
 
     async function cargarDatos() {
         try {
-            // 1. Cargar Jugadores
             const resJ = await fetch(`${SCRIPT_URL}?token=${token}&hoja=jugadores&action=read&id_torneo=${idTorneo}`);
             const dataJ = await resJ.json();
             const divJ = document.getElementById('lista-jugadores');
             divJ.innerHTML = "";
             dataJ.datos.forEach(j => {
                 cacheJugadores[j.id_jugador] = j.nombre_jugador;
-                divJ.innerHTML += `<div><b>${j.id_jugador}:</b> ${j.nombre_jugador}</div>`;
+                divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
             });
 
-            // 2. Cargar Partidos
             const resP = await fetch(`${SCRIPT_URL}?token=${token}&hoja=lista_partidos&action=read&id_torneo=${idTorneo}`);
             const dataP = await resP.json();
             cachePartidos = dataP.datos || [];
             const divP = document.getElementById('lista-partidos');
             divP.innerHTML = "";
             
-            if (cachePartidos.length === 0) {
-                divP.innerHTML = "No hay partidos generados.";
-            } else {
-                cachePartidos.forEach(p => {
-                    const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
-                    const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
-                    divP.innerHTML += `<div><b>${p.id_partido}:</b> ${n1} vs ${n2}</div>`;
-                });
-            }
-        } catch (e) {
-            console.error(e);
-        }
+            cachePartidos.forEach(p => {
+                const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
+                const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
+                divP.innerHTML += `<div><b>${p.id_partido}:</b> ${n1} / ${n2}</div>`;
+            });
+        } catch (e) { document.getElementById('info').innerText = "Error de conexión"; }
     }
 
     document.getElementById('form-resultado').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
-        
         const idP = document.getElementById('id_partido').value.trim().toUpperCase();
-        
-        // Buscar el partido en la caché para no perder los IDs de los jugadores ni el tipo
         const partido = cachePartidos.find(p => p.id_partido.toUpperCase() === idP);
         
-        if (!partido) {
-            alert("Error: El Código de Partido no existe en este torneo.");
-            return;
-        }
+        if (!partido) return alert("El código de partido no existe.");
 
-        // Validación de formato de games (Número Separador Número)
         const regexFormat = /^\d+\D\d+$/;
         const games = [];
         for(let i=1; i<=5; i++) {
             let val = document.getElementById('g'+i).value.trim();
-            if (val !== "" && !regexFormat.test(val)) {
-                alert(`El formato del Game ${i} es incorrecto. Debe ser por ejemplo: 11-5 o 11 5`);
-                return;
-            }
+            if (val !== "" && !regexFormat.test(val)) return alert(`Formato de Set ${i} incorrecto (ej: 11-5)`);
             games.push(val || "0-0");
         }
 
         btn.disabled = true;
-        btn.innerText = "Actualizando...";
+        btn.innerText = "GUARDANDO...";
 
-        // Construir URL con todos los campos necesarios para el Upsert de Google Sheets
         const query = new URLSearchParams({
-            token: token,
-            hoja: "lista_partidos",
-            action: "write",
-            id_torneo: idTorneo,
-            id_partido: partido.id_partido,
-            tipo_partido: partido.tipo_partido,
-            id_jugador1: partido.id_jugador1,
-            id_jugador2: partido.id_jugador2,
-            g1: games[0],
-            g2: games[1],
-            g3: games[2],
-            g4: games[3],
-            g5: games[4]
+            token: token, hoja: "lista_partidos", action: "write", id_torneo: idTorneo,
+            id_partido: partido.id_partido, tipo_partido: partido.tipo_partido,
+            id_jugador1: partido.id_jugador1, id_jugador2: partido.id_jugador2,
+            g1: games[0], g2: games[1], g3: games[2], g4: games[3], g5: games[4]
         });
 
         try {
             const res = await fetch(`${SCRIPT_URL}?${query.toString()}`);
             const data = await res.json();
             if (data.result === "ok") {
-                alert("✅ Resultado guardado correctamente.");
+                alert("✅ Guardado");
                 document.getElementById('form-resultado').reset();
-                cargarDatos(); // Recargar para ver si hay cambios
+                cargarDatos();
             }
-        } catch (err) {
-            alert("Error de conexión");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "ACTUALIZAR RESULTADO";
-        }
+        } catch (err) { alert("Error al guardar"); }
+        finally { btn.disabled = false; btn.innerText = "GUARDAR CAMBIOS"; }
     });
 
     iniciar();
