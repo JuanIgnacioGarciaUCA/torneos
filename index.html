@@ -73,7 +73,11 @@
     }
 
     async function validar() {
-        if (await sha256(t1) === HASH1 && await sha256(t2) === HASH2) {
+        let aux1 = await sha256(t1);
+        let aux2 = await sha256(t2);
+        console.log("Hash1:", aux1);
+        console.log("Hash2:", aux2);
+        if (aux1 === HASH1 && aux2 === HASH2) {
             document.getElementById('seccion-crear').classList.remove('hidden');
             document.getElementById('id_torneo').value = Math.random().toString(36).substring(2, 12).toUpperCase();
         } else {
