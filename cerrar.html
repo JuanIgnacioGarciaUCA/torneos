@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cierre - Supabase 1</title>
+    <title>Cierre - Supabase</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #fff3e0; padding: 20px; display: flex; justify-content: center; }
@@ -84,7 +84,9 @@
 
         // Cargar Jugadores
         const { data: jgs } = await _supabase.from('jugadores').select('*').eq('id_torneo', idT);
+        console.log("Jugadores inscritos:", jgs, "en torneo", idT);
         jugadores = jgs || [];
+        console.log("Jugadores inscritos:", jugadores);
         document.getElementById('lista-jugadores').innerText = jugadores.length + " jugadores inscritos.";
     }
 
