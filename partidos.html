@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Resultados - Supabase</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -44,7 +44,6 @@
         h2 { margin: 0; font-size: 1.4rem; }
         #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
-        /* Paneles de información (Deslizar en móvil) */
         .info-panel {
             display: flex;
             gap: 10px;
@@ -86,7 +85,6 @@
             font-size: 0.8rem;
         }
 
-        /* Formulario */
         .form-card {
             background: var(--card);
             padding: 20px;
@@ -149,7 +147,6 @@
         <div id="info">Sincronizando...</div>
     </div>
 
-    <!-- Paneles superiores -->
     <div class="info-panel">
         <div class="list-box">
             <h4>📅 Partidos y Resultados</h4>
@@ -161,7 +158,6 @@
         </div>
     </div>
 
-    <!-- Formulario de entrada -->
     <div class="form-card">
         <form id="form-resultado">
             <div class="form-group">
@@ -171,7 +167,7 @@
 
             <div class="form-group">
                 <label>Resultados por Set:</label>
-                <span class="help-text">Formato: "11-5", "11 9" (nº separador nº)</span>
+                <span class="help-text">Formato libre: "11-5", "11 9"... (se guardará con guion)</span>
                 <div class="games-container">
                     <input type="text" id="g1" placeholder="Set 1">
                     <input type="text" id="g2" placeholder="Set 2">
@@ -192,8 +188,6 @@
 
 <script>
     const params = new URLSearchParams(window.location.search);
-    
-    // Configuración Supabase
     const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; 
     const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -222,7 +216,6 @@
 
     async function cargarDatos() {
         try {
-            // 1. Obtener Jugadores
             const { data: dataJ } = await _supabase.from('jugadores').select('*').eq('id_torneo', idTorneo);
             const divJ = document.getElementById('lista-jugadores');
             divJ.innerHTML = "";
@@ -231,7 +224,6 @@
                 divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
             });
 
-            // 2. Obtener Partidos
             const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo);
             cachePartidos = dataP || [];
             const divP = document.getElementById('lista-partidos');
@@ -240,63 +232,68 @@
             cachePartidos.forEach(p => {
                 const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
                 const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
-                
-                const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0" && s !== "0");
+                const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0");
                 const scoreDisplay = scores.length > 0 
                     ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` 
                     : '<span class="score-preview" style="color:#bbb">Sin resultado</span>';
 
-                divP.innerHTML += `
-                    <div class="match-item">
-                        <b>${p.id_partido}:</b> ${n1} vs ${n2}
-                        ${scoreDisplay}
-                    </div>`;
+                divP.innerHTML += `<div class="match-item"><b>${p.id_partido}:</b> ${n1} vs ${n2}${scoreDisplay}</div>`;
             });
-        } catch (e) { console.error("Error cargando datos:", e); }
+        } catch (e) { console.error("Error:", e); }
     }
 
     document.getElementById('form-resultado').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
         const idPInput = document.getElementById('id_partido').value.trim().toUpperCase();
-        
-        // Buscar el partido en la caché para asegurar que existe y obtener sus datos originales
         const partido = cachePartidos.find(p => p.id_partido.toUpperCase() === idPInput);
-        if (!partido) return alert("El código de partido no existe en este torneo.");
+        
+        if (!partido) return alert("El código de partido no existe.");
 
-        // Validación de formato (Dígito - Separador - Dígito)
-        const regexFormat = /^\d+\D\d+$/;
         const games = [];
+        let hayHuecoVacio = false;
+
         for(let i=1; i<=5; i++) {
             let val = document.getElementById('g'+i).value.trim();
-            if (val !== "" && !regexFormat.test(val)) return alert(`Formato de Set ${i} incorrecto (ej: 11-5)`);
-            games.push(val || "0-0");
+            
+            if (val === "") {
+                hayHuecoVacio = true;
+                games.push("0-0");
+            } else {
+                // Si ya encontramos un hueco vacío antes, este no es consecutivo
+                if (hayHuecoVacio) {
+                    return alert(`No puedes saltarte el Set ${i-1}. Debes rellenar los sets de forma consecutiva.`);
+                }
+
+                // Extraer solo los números
+                const numeros = val.match(/\d+/g);
+                if (!numeros || numeros.length !== 2) {
+                    return alert(`El Set ${i} debe tener exactamente dos números (ej: 11-5).`);
+                }
+
+                // Guardar normalizado con guion
+                games.push(`${numeros[0]}-${numeros[1]}`);
+            }
         }
 
         btn.disabled = true;
         btn.innerText = "GUARDANDO...";
 
-        // Usamos upsert de Supabase. Al tener id_torneo e id_partido como PRIMARY KEY, actualizará la fila.
         const { error } = await _supabase.from('lista_partidos').upsert({
             id_torneo: idTorneo,
             id_partido: partido.id_partido,
             tipo_partido: partido.tipo_partido,
             id_jugador1: partido.id_jugador1,
             id_jugador2: partido.id_jugador2,
-            g1: games[0],
-            g2: games[1],
-            g3: games[2],
-            g4: games[3],
-            g5: games[4],
+            g1: games[0], g2: games[1], g3: games[2], g4: games[3], g5: games[4],
             log: new Date().toISOString()
         });
 
         if (error) {
-            alert("Error al guardar: " + error.message);
+            alert("Error: " + error.message);
             btn.disabled = false;
-            btn.innerText = "GUARDAR RESULTADO";
         } else {
-            alert("✅ Resultado guardado correctamente.");
+            alert("✅ Resultado guardado.");
             location.reload(); 
         }
     });
