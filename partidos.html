@@ -25,7 +25,6 @@
         h2 { margin: 0; font-size: 1.4rem; }
         #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
-        /* Panel de información (Solo partidos ahora) */
         .info-panel { margin-bottom: 20px; }
         .list-box { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; max-height: 220px; overflow-y: auto; font-size: 0.85rem; width: 100%; box-sizing: border-box; }
         .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; z-index: 10; }
@@ -34,7 +33,7 @@
         .score-preview { display: block; color: var(--accent); font-family: monospace; font-weight: bold; margin-top: 3px; font-size: 0.8rem; }
         .match-divider { font-weight: bold; color: #666; font-size: 0.75rem; text-transform: uppercase; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; margin: 10px 0 5px 0; }
 
-        .form-card { background: var(--card); padding: 20px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .form-card { background: var(--card); padding: 20px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; margin-bottom: 20px; }
         .form-group { margin-bottom: 18px; }
         label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
 
@@ -46,6 +45,12 @@
 
         button { width: 100%; padding: 16px; background-color: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:disabled { background-color: #dadce0; }
+
+        /* Estilo para la sección de Administrador */
+        .admin-unlock-card { background: #fff3e0; padding: 15px; border-radius: 12px; border: 1px dashed var(--admin); text-align: center; }
+        .admin-unlock-card h4 { margin: 0 0 10px 0; color: #e65100; font-size: 0.9rem; }
+        .btn-unlock { background-color: var(--admin); padding: 10px; font-size: 0.9rem; margin-top: 5px; }
+
         .hidden { display: none; }
     </style>
 </head>
@@ -87,6 +92,13 @@
 
             <button type="submit" id="btn-enviar">GUARDAR RESULTADO</button>
         </form>
+    </div>
+
+    <!-- SECCIÓN PARA DESBLOQUEAR MODO ADMIN -->
+    <div id="admin-access-section" class="admin-unlock-card">
+        <h4>¿Necesitas modificar un resultado?</h4>
+        <input type="password" id="admin_key" placeholder="Introduce clave de administrador">
+        <button class="btn-unlock" onclick="desbloquearAdmin()">DESBLOQUEAR EDICIÓN</button>
     </div>
 </div>
 
@@ -130,6 +142,7 @@
             esAdmin = true;
             document.getElementById('header').classList.add('admin-mode');
             document.getElementById('titulo-pagina').innerText = "Modo Administrador";
+            document.getElementById('admin-access-section').classList.add('hidden'); // Ocultar si ya es admin
         }
 
         document.getElementById('info').innerText = "Torneo: " + idTorneo;
@@ -138,19 +151,14 @@
 
     async function cargarDatos() {
         try {
-            // 1. Cargamos jugadores para tener el mapa de nombres internamente
             const { data: dataJ } = await _supabase.from('jugadores').select('*').eq('id_torneo', idTorneo);
-            (dataJ || []).forEach(j => {
-                cacheJugadores[j.id_jugador] = j.nombre_jugador;
-            });
+            (dataJ || []).forEach(j => cacheJugadores[j.id_jugador] = j.nombre_jugador);
 
-            // 2. Cargar Partidos
             const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo);
             cachePartidos = dataP || [];
             
             const divP = document.getElementById('lista-partidos');
             const selectP = document.getElementById('id_partido');
-            
             divP.innerHTML = "";
             selectP.innerHTML = '<option value="">--- Seleccionar partido ---</option>';
 
@@ -158,9 +166,7 @@
             const pendientes = cachePartidos.filter(p => ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
 
             const sortFn = (a, b) => a.id_partido.localeCompare(b.id_partido, undefined, {numeric: true});
-            
-            jugados.sort(sortFn);
-            pendientes.sort(sortFn);
+            jugados.sort(sortFn); pendientes.sort(sortFn);
 
             if (jugados.length > 0) {
                 divP.innerHTML += '<div class="match-divider">Finalizados</div>';
@@ -183,12 +189,6 @@
                     selectP.appendChild(opt);
                 }
             });
-
-            if (selectP.options.length === 1 && !esAdmin) {
-                selectP.innerHTML = '<option value="">✅ Todos completados</option>';
-                document.getElementById('btn-enviar').disabled = true;
-            }
-
         } catch (e) { console.error(e); }
     }
 
@@ -198,6 +198,20 @@
         const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0");
         const resText = done ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` : '<span class="score-preview" style="color:#bbb">Pendiente</span>';
         return `<div class="match-item"><b>${p.id_partido}:</b> ${n1} vs ${n2}${resText}</div>`;
+    }
+
+    // FUNCIÓN PARA DESBLOQUEAR MODO ADMIN
+    async function desbloquearAdmin() {
+        const clave = document.getElementById('admin_key').value;
+        const hash = await sha256(clave);
+        
+        if (hash === HASH_T2) {
+            // Recargar la página añadiendo token2 a la URL actual
+            params.set('token2', clave);
+            window.location.search = params.toString();
+        } else {
+            alert("Clave incorrecta.");
+        }
     }
 
     document.getElementById('form-resultado').addEventListener('submit', async (e) => {
@@ -214,7 +228,7 @@
             let val = document.getElementById('g'+i).value.trim();
             if (val === "") { hayVacio = true; games.push("0-0"); }
             else {
-                if (hayVacio) return alert(`Sigue el orden (falta Set ${i-1}).`);
+                if (hayVacio) return alert(`Falta Set ${i-1}.`);
                 const nums = val.match(/\d+/g);
                 if (!nums || nums.length !== 2) return alert(`Set ${i} requiere 2 números.`);
                 games.push(`${nums[0]}-${nums[1]}`);
@@ -222,8 +236,6 @@
         }
 
         btn.disabled = true;
-        btn.innerText = "GUARDANDO...";
-
         const { error } = await _supabase.from('lista_partidos').upsert({
             id_torneo: idTorneo, id_partido: partido.id_partido, tipo_partido: partido.tipo_partido,
             id_jugador1: partido.id_jugador1, id_jugador2: partido.id_jugador2,
