@@ -12,7 +12,7 @@
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; overflow-x: auto; }
         h2 { border-bottom: 2px solid var(--primary); padding-bottom: 8px; color: var(--primary); font-size: 1.2rem; margin-top: 0; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 650px; }
         th, td { padding: 10px; border: 1px solid #eee; text-align: center; }
         th { background: #f8f9fa; font-weight: bold; color: #555; }
         .col-destacada { background: #f0f7ff; font-weight: bold; color: var(--primary); }
@@ -32,6 +32,9 @@
         .badge-ok { background: #ceead6; color: #0d652d; }
         .badge-wait { background: #feefc3; color: #b05e00; }
         .hidden { display: none; }
+
+        /* Estilo para separar bloques de partidos */
+        .match-section-title { font-weight: bold; color: #666; font-size: 0.8rem; margin: 15px 0 5px 0; text-transform: uppercase; background: #eee; padding: 4px 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -127,7 +130,6 @@
     }
 
     function procesar(torneo) {
-        // Inicializar stats
         stats = {};
         const grupos = {};
         let pendientesGrupos = 0;
@@ -136,7 +138,7 @@
 
         jugadores.forEach(j => {
             stats[j.id_jugador] = { 
-                nombre: j.nombre_jugador, mPts: 0, 
+                nombre: j.nombre_jugador, mPts: 0, mW: 0,
                 sW: 0, sL: 0, pW: 0, pL: 0, pj: 0 
             };
         });
@@ -154,7 +156,6 @@
                 return;
             }
 
-            // Detectar No Presentado (W.O.)
             let isNoShow = false;
             let noShowWinner = 0; 
             if (games.length === 1) {
@@ -172,16 +173,14 @@
                 }
             });
 
-            // Asignar puntos de partido (2 gana, 1 pierde, 0 no presentado)
             if (isNoShow) {
-                if (noShowWinner === 1) { stats[p.id_jugador1].mPts += 2; stats[p.id_jugador2].mPts += 0; }
-                else { stats[p.id_jugador1].mPts += 0; stats[p.id_jugador2].mPts += 2; }
+                if (noShowWinner === 1) { stats[p.id_jugador1].mPts += 2; stats[p.id_jugador1].mW += 1; }
+                else { stats[p.id_jugador2].mPts += 2; stats[p.id_jugador2].mW += 1; }
             } else {
-                if (mSW1 > mSW2) { stats[p.id_jugador1].mPts += 2; stats[p.id_jugador2].mPts += 1; }
-                else { stats[p.id_jugador1].mPts += 1; stats[p.id_jugador2].mPts += 2; }
+                if (mSW1 > mSW2) { stats[p.id_jugador1].mPts += 2; stats[p.id_jugador1].mW += 1; stats[p.id_jugador2].mPts += 1; }
+                else { stats[p.id_jugador2].mPts += 2; stats[p.id_jugador2].mW += 1; stats[p.id_jugador1].mPts += 1; }
             }
 
-            // Acumular Sets y Puntos Totales
             stats[p.id_jugador1].sW += mSW1; stats[p.id_jugador1].sL += mSW2;
             stats[p.id_jugador1].pW += mPW1; stats[p.id_jugador1].pL += mPW2;
             stats[p.id_jugador2].sW += mSW2; stats[p.id_jugador2].sL += mSW1;
@@ -222,13 +221,13 @@
         zona.innerHTML = "";
         Object.keys(grupos).sort().forEach(gn => {
             let h = `<div class="card"><h2>${gn}</h2><table><thead><tr>
-                <th>Jugador</th><th>PJ</th><th class="col-destacada">Pts</th>
+                <th>Jugador</th><th>PJ</th><th>PG</th><th class="col-destacada">Pts</th>
                 <th>J. Gan</th><th>J. Per</th><th>P. Gan</th><th>P. Per</th>
                 </tr></thead><tbody>`;
             const sIds = Array.from(grupos[gn]).sort((a,b) => compararJugadores(a,b));
             sIds.forEach(id => {
                 const j = stats[id];
-                h += `<tr><td>${j.nombre}</td><td>${j.pj}</td><td class="col-destacada">${j.mPts}</td>
+                h += `<tr><td>${j.nombre}</td><td>${j.pj}</td><td>${j.mW}</td><td class="col-destacada">${j.mPts}</td>
                     <td>${j.sW}</td><td>${j.sL}</td><td>${j.pW}</td><td>${j.pL}</td></tr>`;
             });
             zona.innerHTML += h + `</tbody></table></div>`;
@@ -237,15 +236,39 @@
 
     function renderPartidos() {
         const zona = document.getElementById('lista-partidos');
-        zona.innerHTML = partidos.map(p => {
-            const res = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(x => x && x!=="0-0").join(" | ");
-            const badge = res ? `<span class="badge badge-ok">OK</span>` : `<span class="badge badge-wait">PTE</span>`;
-            return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.85rem;">
-                ${badge} <b>${p.id_partido}</b> (${p.tipo_partido})<br>
-                ${stats[p.id_jugador1].nombre} vs ${stats[p.id_jugador2].nombre}
-                <div style="color:var(--primary); font-family:monospace; font-weight:bold;">${res}</div>
-            </div>`;
-        }).join("");
+        
+        // Separar jugados de pendientes
+        const jugados = partidos.filter(p => [p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
+        const pendientes = partidos.filter(p => ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
+
+        // Ordenar ambos bloques por id_partido (numérico inteligente)
+        const criterioId = (a, b) => a.id_partido.localeCompare(b.id_partido, undefined, {numeric: true, sensitivity: 'base'});
+        jugados.sort(criterioId);
+        pendientes.sort(criterioId);
+
+        let html = "";
+
+        if (jugados.length > 0) {
+            html += `<div class="match-section-title">Partidos Finalizados (${jugados.length})</div>`;
+            html += jugados.map(p => rowPartido(p, true)).join("");
+        }
+
+        if (pendientes.length > 0) {
+            html += `<div class="match-section-title">Partidos Pendientes (${pendientes.length})</div>`;
+            html += pendientes.map(p => rowPartido(p, false)).join("");
+        }
+
+        zona.innerHTML = html || "No hay partidos registrados.";
+    }
+
+    function rowPartido(p, isDone) {
+        const res = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(x => x && x!=="0-0").join(" | ");
+        const badge = isDone ? `<span class="badge badge-ok">OK</span>` : `<span class="badge badge-wait">PTE</span>`;
+        return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.85rem;">
+            ${badge} <b>${p.id_partido}</b> (${p.tipo_partido})<br>
+            ${stats[p.id_jugador1]?.nombre || 'Jugador '+p.id_jugador1} vs ${stats[p.id_jugador2]?.nombre || 'Jugador '+p.id_jugador2}
+            <div style="color:var(--primary); font-family:monospace; font-weight:bold;">${res}</div>
+        </div>`;
     }
 
     document.getElementById('btn-generar').addEventListener('click', async () => {
@@ -255,7 +278,7 @@
         
         const ranking = Object.keys(stats).sort((a,b) => compararJugadores(a,b));
         if (nCopa === 0) return alert("Selecciona clasificados.");
-        if (ranking.length < (nCopa + nCons)) return alert("No hay suficientes jugadores.");
+        if (ranking.length < (nCopa + nCons)) return alert("No hay jugadores suficientes.");
 
         if (!confirm("Se generarán los cuadros eliminatorios. ¿Continuar?")) return;
         const btn = document.getElementById('btn-generar');
