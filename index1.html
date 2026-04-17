@@ -5,26 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Admin - Crear Torneo</title>
+    <!-- Cargamos la librería de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 800px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
         h2 { color: #1a73e8; text-align: center; }
         .error { color: #d93025; background: #fce8e6; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 20px;}
         .hidden { display: none; }
-        form { display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; }
+        form { display: flex; flex-direction: column; gap: 15px; }
         label { font-weight: bold; margin-bottom: -10px; font-size: 0.9em; color: #555; }
         input, button { padding: 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 1em; }
         input[readonly] { background-color: #e9ecef; cursor: not-allowed; font-family: monospace; font-weight: bold; }
         button { background-color: #1a73e8; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
         button:hover { background-color: #1557b0; }
         
-        .qr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
-        .qr-card { background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #ddd; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
-        .qr-card img { width: 150px; height: 150px; margin-bottom: 10px; border: 5px solid #fff; }
-        .qr-card a { display: block; color: #1a73e8; text-decoration: none; font-size: 0.85em; font-weight: bold; word-break: break-all; margin-top: 5px; }
-        .qr-card p { font-size: 0.85em; margin: 0 0 10px 0; color: #333; font-weight: bold; text-transform: uppercase; }
-        .loading-text { font-size: 0.7em; color: #888; font-style: italic; }
+        .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+        .qr-card { background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #ddd; }
+        .qr-card img { width: 140px; height: 140px; margin-bottom: 10px; border: 1px solid #fff; }
+        .qr-card a { display: block; color: #1a73e8; text-decoration: none; font-size: 0.8em; font-weight: bold; word-break: break-all; margin-top: 5px; }
+        .qr-card a:hover { text-decoration: underline; }
+        .qr-card p { font-size: 0.85em; margin: 0; color: #333; font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -50,7 +51,6 @@
 
     <div id="seccion-exito" class="hidden">
         <h2 style="color: #188038;">✅ Torneo Registrado: <span id="display-id"></span></h2>
-        <p style="text-align: center; font-size: 0.9em; color: #666;">Los enlaces se han acortado para facilitar la lectura del QR.</p>
         <div class="qr-grid" id="contenedor-qrs">
             <!-- Los QRs se generarán aquí -->
         </div>
@@ -61,12 +61,16 @@
 <script>
     const params = new URLSearchParams(window.location.search);
 
-    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; 
+    // --- CONFIGURACIÓN SUPABASE ---
+    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; // "https://tu-proyecto.supabase.co"; 
+    //"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYnBtamdiY3ljeXhkdWJtcW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjcxNTksImV4cCI6MjA5MTk0MzE1OX0.Pe4qVDRM3bP1BobROD2YSdfN1_tvEK7-D39BPALA0YI";  //"tu-anon-key-aqui";
+    // https://juanignaciogarciauca.github.io/torneos/?token=torneos_jigg&token2=admin1&key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYnBtamdiY3ljeXhkdWJtcW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjcxNTksImV4cCI6MjA5MTk0MzE1OX0.Pe4qVDRM3bP1BobROD2YSdfN1_tvEK7-D39BPALA0YI
     const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const HASH1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1"; // torneos_jigg
     const HASH2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7"; // admin1
+
     
     const t1 = params.get('token') || "";
     const t2 = params.get('token2') || "";
@@ -74,19 +78,6 @@
     async function sha256(txt) {
         const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
         return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    // Función para acortar URLs usando is.gd
-    async function acortarURL(urlLarga) {
-        try {
-            // is.gd no requiere API key y soporta CORS mediante el parámetro format=json
-            const response = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(urlLarga)}`);
-            const data = await response.json();
-            return data.shorturl || urlLarga;
-        } catch (error) {
-            console.error("Error al acortar:", error);
-            return urlLarga; // Si falla, devolvemos la larga
-        }
     }
 
     async function validar() {
@@ -104,13 +95,14 @@
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
         btn.disabled = true;
-        btn.innerText = "Guardando...";
+        btn.innerText = "Guardando en Supabase...";
 
         const idT = document.getElementById('id_torneo').value;
         const nombre = document.getElementById('nombre_torneo').value;
         const fecha = document.getElementById('fechahora_torneo').value;
 
         try {
+            // INSERTAR EN SUPABASE
             const { error } = await _supabase
                 .from('listatorneos')
                 .insert([{ 
@@ -133,43 +125,31 @@
         }
     });
 
-    async function generarQRs(idT) {
+    function generarQRs(idT) {
         document.getElementById('seccion-crear').classList.add('hidden');
         document.getElementById('seccion-exito').classList.remove('hidden');
         const base = window.location.href.split('?')[0].replace('index.html', '');
         
-        const config = [
-            { t: "INSCRIPCIÓN", u: `${base}jugadores.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "white" },
-            { t: "RESULTADOS", u: `${base}partidos.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "white" },
-            { t: "CERRAR", u: `${base}cerrar.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "#fff3e0" },
-            { t: "REVISIÓN PÚBLICA", u: `${base}revisiontorneo.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "#e3f2fd" },
-            { t: "REVISIÓN ADMIN", u: `${base}revisiontorneo.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "#fff3e0" }
+        const urls = [
+            { t: "INSCRIPCIÓN", u: `${base}jugadores.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}` },
+            { t: "RESULTADOS", u: `${base}partidos.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}` },
+            { t: "CERRAR", u: `${base}cerrar.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}` },
+            { t: "REVISIÓN", u: `${base}revisiontorneo.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}` }
         ];
 
         const contenedor = document.getElementById('contenedor-qrs');
-        
-        for (const item of config) {
+        urls.forEach((item) => {
             const card = document.createElement('div');
             card.className = 'qr-card';
-            card.style.background = item.color;
+            if(item.t === "CERRAR") card.style.background = "#fff3e0";
             
-            // Ponemos un placeholder mientras acorta
             card.innerHTML = `
                 <p>${item.t}</p>
-                <div class="loading-text">Acortando enlace y generando QR...</div>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(item.u)}">
+                <a href="${item.u}" target="_blank">Abrir enlace ↗</a>
             `;
             contenedor.appendChild(card);
-
-            // Proceso asíncrono de acortamiento
-            const urlFinal = await acortarURL(item.u);
-            
-            card.innerHTML = `
-                <p>${item.t}</p>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlFinal)}">
-                <a href="${urlFinal}" target="_blank">Abrir enlace ↗</a>
-                <span style="font-size: 0.6em; color: #aaa; margin-top:5px;">${urlFinal}</span>
-            `;
-        }
+        });
     }
 </script>
 </body>
