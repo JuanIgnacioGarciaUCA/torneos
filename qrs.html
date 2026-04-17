@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>Recuperar QRs - Torneo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --admin: #ef6c00;
+            --bg: #f0f2f5;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 800px; }
+        
+        h2 { color: var(--primary); text-align: center; margin-top: 0; }
+        .torneo-info { text-align: center; background: #e8f0fe; padding: 10px; border-radius: 8px; margin-bottom: 25px; font-weight: bold; }
+
+        .qr-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 20px; 
+        }
+
+        .qr-card { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 10px; 
+            text-align: center; 
+            border: 1px solid #ddd; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+        }
+
+        .qr-card p { font-size: 0.85em; font-weight: bold; margin: 0 0 10px 0; color: #333; text-transform: uppercase; }
+        .qr-card img { width: 160px; height: 160px; background: white; border: 5px solid white; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .qr-card a { color: var(--primary); text-decoration: none; font-size: 0.8em; font-weight: bold; word-break: break-all; }
+        .qr-card a:hover { text-decoration: underline; }
+
+        .error-msg { color: #d93025; background: #fce8e6; padding: 20px; border-radius: 8px; text-align: center; font-weight: bold; }
+        .hidden { display: none; }
+        
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
+            .container { box-shadow: none; width: 100%; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="auth-error" class="error-msg hidden">
+        ⚠️ Acceso Denegado: Credenciales de administrador incorrectas.
+    </div>
+
+    <div id="content" class="hidden">
+        <button class="no-print" onclick="window.print()" style="float: right; padding: 8px 15px; cursor: pointer;">Imprimir QRs 🖨️</button>
+        <h2 id="titulo">Códigos QR del Torneo</h2>
+        <div id="id-display" class="torneo-info">Cargando ID...</div>
+
+        <div class="qr-grid" id="contenedor-qrs">
+            <!-- Los QRs se cargarán aquí -->
+        </div>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    
+    // Configuración Supabase
+    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; 
+    const SUPABASE_KEY = params.get('key') || "";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Hashes de validación
+    const HASH_T1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1"; // torneos_jigg
+    const HASH_T2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7"; // admin1
+
+    const t1 = params.get('token') || "";
+    const t2 = params.get('token2') || "";
+    const idT = params.get('id_torneo');
+
+    async function sha256(txt) {
+        if(!txt) return "";
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function validarAcceso() {
+        const h1 = await sha256(t1);
+        const h2 = await sha256(t2);
+
+        // Esta página requiere AMBOS tokens válidos por ser de administración
+        if (h1 === HASH_T1 && h2 === HASH_T2 && idT) {
+            document.getElementById('content').classList.remove('hidden');
+            document.getElementById('id-display').innerText = "ID TORNEO: " + idT;
+            cargarQRsDesdeBaseDatos();
+        } else {
+            document.getElementById('auth-error').classList.remove('hidden');
+        }
+    }
+
+    async function cargarQRsDesdeBaseDatos() {
+        try {
+            const { data, error } = await _supabase
+                .from('qrs_torneos')
+                .select('*')
+                .eq('id_torneo', idT)
+                .single();
+
+            if (error || !data) {
+                document.getElementById('contenedor-qrs').innerHTML = "<p>No se encontraron QRs guardados para este ID de torneo.</p>";
+                return;
+            }
+
+            const config = [
+                { t: "Inscripción Jugadores", u: data.url_inscripcion, c: "white" },
+                { t: "Registrar Resultados", u: data.url_resultados, c: "white" },
+                { t: "Cerrar Inscripciones (Admin)", u: data.url_cerrar, c: "#fff3e0" },
+                { t: "Revisión Pública", u: data.url_revision_publica, c: "#e3f2fd" },
+                { t: "Revisión Administrador", u: data.url_revision_admin, c: "#fff3e0" }
+            ];
+
+            const contenedor = document.getElementById('contenedor-qrs');
+            contenedor.innerHTML = "";
+
+            config.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'qr-card';
+                card.style.background = item.c;
+                
+                card.innerHTML = `
+                    <p>${item.t}</p>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(item.u)}" alt="QR">
+                    <a href="${item.u}" target="_blank">Abrir enlace ↗</a>
+                `;
+                contenedor.appendChild(card);
+            });
+
+        } catch (err) {
+            console.error(err);
+            alert("Error al conectar con Supabase.");
+        }
+    }
+
+    validarAcceso();
+</script>
+</body>
+</html>

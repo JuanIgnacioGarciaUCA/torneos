@@ -25,7 +25,6 @@
         .qr-card a { display: block; color: #1a73e8; text-decoration: none; font-size: 0.85em; font-weight: bold; word-break: break-all; margin-top: 5px; }
         .qr-card p { font-size: 0.85em; margin: 0 0 10px 0; color: #333; font-weight: bold; text-transform: uppercase; }
         .loading-text { font-size: 0.7em; color: #888; font-style: italic; }
-        #status-db { text-align: center; font-size: 0.8em; color: #28a745; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -51,14 +50,17 @@
 
     <div id="seccion-exito" class="hidden">
         <h2 style="color: #188038;">✅ Torneo Registrado: <span id="display-id"></span></h2>
-        <div id="status-db">Procesando enlaces...</div>
-        <div class="qr-grid" id="contenedor-qrs"></div>
+        <p style="text-align: center; font-size: 0.9em; color: #666;">Los enlaces se han acortado para facilitar la lectura del QR.</p>
+        <div class="qr-grid" id="contenedor-qrs">
+            <!-- Los QRs se generarán aquí -->
+        </div>
         <button style="margin-top:25px; width:100%; background:#5f6368;" onclick="location.reload()">Crear otro torneo</button>
     </div>
 </div>
 
 <script>
     const params = new URLSearchParams(window.location.search);
+
     const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; 
     const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -74,13 +76,16 @@
         return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+    // Función para acortar URLs usando is.gd
     async function acortarURL(urlLarga) {
         try {
+            // is.gd no requiere API key y soporta CORS mediante el parámetro format=json
             const response = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(urlLarga)}`);
             const data = await response.json();
             return data.shorturl || urlLarga;
         } catch (error) {
-            return urlLarga;
+            console.error("Error al acortar:", error);
+            return urlLarga; // Si falla, devolvemos la larga
         }
     }
 
@@ -106,17 +111,21 @@
         const fecha = document.getElementById('fechahora_torneo').value;
 
         try {
-            const { error } = await _supabase.from('listatorneos').insert([{ 
-                id_torneo: idT, 
-                nombre_torneo: nombre, 
-                fechahora_torneo: fecha,
-                tipo_torneo: 'PENDIENTE',
-                max_num_grupos: 0
-            }]);
+            const { error } = await _supabase
+                .from('listatorneos')
+                .insert([{ 
+                    id_torneo: idT, 
+                    nombre_torneo: nombre, 
+                    fechahora_torneo: fecha,
+                    tipo_torneo: 'PENDIENTE',
+                    max_num_grupos: 0
+                }]);
+
             if (error) throw error;
 
             document.getElementById('display-id').innerText = idT;
             generarQRs(idT);
+
         } catch (err) { 
             alert("Error en Supabase: " + err.message); 
             btn.disabled = false;
@@ -130,43 +139,36 @@
         const base = window.location.href.split('?')[0].replace('index.html', '');
         
         const config = [
-            { t: "INSCRIPCIÓN", u: `${base}jugadores.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, db: "url_inscripcion" },
-            { t: "RESULTADOS", u: `${base}partidos.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, db: "url_resultados" },
-            { t: "CERRAR", u: `${base}cerrar.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}`, db: "url_cerrar" },
-            { t: "REVISIÓN PÚBLICA", u: `${base}revisiontorneo.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, db: "url_revision_publica" },
-            { t: "REVISIÓN ADMIN", u: `${base}revisiontorneo.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}`, db: "url_revision_admin" }
+            { t: "INSCRIPCIÓN", u: `${base}jugadores.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "white" },
+            { t: "RESULTADOS", u: `${base}partidos.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "white" },
+            { t: "CERRAR", u: `${base}cerrar.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "#fff3e0" },
+            { t: "REVISIÓN PÚBLICA", u: `${base}revisiontorneo.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "#e3f2fd" },
+            { t: "REVISIÓN ADMIN", u: `${base}revisiontorneo.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}`, color: "#fff3e0" }
         ];
 
         const contenedor = document.getElementById('contenedor-qrs');
-        const qrDataForDB = { id_torneo: idT };
-
+        
         for (const item of config) {
             const card = document.createElement('div');
             card.className = 'qr-card';
-            card.innerHTML = `<p>${item.t}</p><div class="loading-text">Acortando...</div>`;
+            card.style.background = item.color;
+            
+            // Ponemos un placeholder mientras acorta
+            card.innerHTML = `
+                <p>${item.t}</p>
+                <div class="loading-text">Acortando enlace y generando QR...</div>
+            `;
             contenedor.appendChild(card);
 
+            // Proceso asíncrono de acortamiento
             const urlFinal = await acortarURL(item.u);
-            qrDataForDB[item.db] = urlFinal; // Guardamos para la DB
-
+            
             card.innerHTML = `
                 <p>${item.t}</p>
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlFinal)}">
-                <a href="${urlFinal}" target="_blank">Enlace corto ↗</a>
+                <a href="${urlFinal}" target="_blank">Abrir enlace ↗</a>
+                <span style="font-size: 0.6em; color: #aaa; margin-top:5px;">${urlFinal}</span>
             `;
-        }
-
-        // Guardar en la tabla qrs_torneos
-        const statusDiv = document.getElementById('status-db');
-        statusDiv.innerText = "Guardando QRs en base de datos...";
-        
-        const { error } = await _supabase.from('qrs_torneos').insert([qrDataForDB]);
-        
-        if (error) {
-            statusDiv.innerText = "❌ Error al guardar QRs: " + error.message;
-            statusDiv.style.color = "red";
-        } else {
-            statusDiv.innerText = "✅ Todos los QRs han sido guardados en la base de datos.";
         }
     }
 </script>
