@@ -13,128 +13,37 @@
             --card: #ffffff;
             --text: #3c4043;
             --accent: #1a73e8;
+            --admin: #ef6c00;
         }
 
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: var(--bg); 
-            color: var(--text);
-            margin: 0; 
-            display: flex; 
-            justify-content: center;
-        }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 500px; padding: 15px; box-sizing: border-box; }
 
-        .container { 
-            width: 100%; 
-            max-width: 500px; 
-            padding: 15px;
-            box-sizing: border-box;
-        }
-
-        .header-card {
-            background: var(--primary);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(217, 48, 37, 0.2);
-        }
+        .header-card { background: var(--primary); color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(217, 48, 37, 0.2); }
+        .header-card.admin-mode { background: var(--admin); box-shadow: 0 4px 12px rgba(239, 108, 0, 0.2); }
 
         h2 { margin: 0; font-size: 1.4rem; }
         #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
-        .info-panel {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            overflow-x: auto; 
-            padding-bottom: 10px;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .list-box {
-            flex: 0 0 85%; 
-            background: var(--card);
-            border-radius: 12px;
-            padding: 12px;
-            border: 1px solid #e0e0e0;
-            max-height: 220px;
-            overflow-y: auto;
-            font-size: 0.85rem;
-        }
-
-        .list-box h4 { 
-            margin: 0 0 8px 0; 
-            color: var(--primary); 
-            border-bottom: 1px solid #fce8e6; 
-            padding-bottom: 5px; 
-            position: sticky; 
-            top: 0; 
-            background: white; 
-            z-index: 1;
-        }
+        .info-panel { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
+        .list-box { flex: 0 0 85%; background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; max-height: 200px; overflow-y: auto; font-size: 0.85rem; }
+        .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; }
 
         .match-item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
-        .score-preview {
-            display: block;
-            color: var(--accent);
-            font-family: monospace;
-            font-weight: bold;
-            margin-top: 3px;
-            font-size: 0.8rem;
-        }
+        .score-preview { display: block; color: var(--accent); font-family: monospace; font-weight: bold; margin-top: 3px; font-size: 0.8rem; }
 
-        .form-card {
-            background: var(--card);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border: 1px solid #eee;
-        }
-
+        .form-card { background: var(--card); padding: 20px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .form-group { margin-bottom: 18px; }
         label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
 
-        input {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            font-size: 16px; 
-            box-sizing: border-box;
-        }
+        /* Estilo para el SELECT */
+        select, input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; box-sizing: border-box; background: white; }
+        select:focus, input:focus { border-color: var(--primary); outline: none; }
 
-        input:focus { border-color: var(--primary); outline: none; }
-
-        .id-input { 
-            font-family: 'Courier New', monospace; 
-            text-transform: uppercase; 
-            background: #fffde7;
-            font-weight: bold;
-        }
-
-        .games-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 10px;
-        }
-
+        .games-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .help-text { font-size: 0.75rem; color: #70757a; margin-bottom: 10px; display: block; }
 
-        button {
-            width: 100%;
-            padding: 16px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
+        button { width: 100%; padding: 16px; background-color: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:disabled { background-color: #dadce0; }
         .hidden { display: none; }
     </style>
@@ -142,14 +51,14 @@
 <body>
 
 <div class="container" id="main-view">
-    <div class="header-card">
-        <h2>Registrar Resultado</h2>
+    <div id="header" class="header-card">
+        <h2 id="titulo-pagina">Registrar Resultado</h2>
         <div id="info">Sincronizando...</div>
     </div>
 
     <div class="info-panel">
         <div class="list-box">
-            <h4>📅 Partidos y Resultados</h4>
+            <h4>📅 Partidos del Torneo</h4>
             <div id="lista-partidos">Cargando...</div>
         </div>
         <div class="list-box">
@@ -161,13 +70,16 @@
     <div class="form-card">
         <form id="form-resultado">
             <div class="form-group">
-                <label>Código del Partido:</label>
-                <input type="text" id="id_partido" class="id-input" placeholder="Ej: G1-P1" required>
+                <label>Seleccionar Partido:</label>
+                <!-- CAMBIO: Ahora es un SELECT -->
+                <select id="id_partido" required>
+                    <option value="">Cargando partidos...</option>
+                </select>
             </div>
 
             <div class="form-group">
                 <label>Resultados por Set:</label>
-                <span class="help-text">Formato libre: "11-5", "11 9"... (se guardará con guion)</span>
+                <span class="help-text">Rellena en orden (ej: 11-5, 11 9...)</span>
                 <div class="games-container">
                     <input type="text" id="g1" placeholder="Set 1">
                     <input type="text" id="g2" placeholder="Set 2">
@@ -192,30 +104,45 @@
     const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const HASH_REQUERIDO = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
-    const token = params.get('token') || "";
+    const HASH_T1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1"; // torneos_jigg
+    const HASH_T2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7"; // admin1
+
+    const t1 = params.get('token') || "";
+    const t2 = params.get('token2') || "";
     const idTorneo = params.get('id_torneo');
 
     let cachePartidos = [];
     let cacheJugadores = {};
+    let esAdmin = false;
 
     async function sha256(txt) {
+        if(!txt) return "";
         const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
         return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
     async function iniciar() {
-        if (await sha256(token) !== HASH_REQUERIDO || !idTorneo) {
+        const h1 = await sha256(t1);
+        if (h1 !== HASH_T1 || !idTorneo) {
             document.getElementById('main-view').classList.add('hidden');
             document.getElementById('error-auth').classList.remove('hidden');
             return;
         }
+
+        const h2 = await sha256(t2);
+        if (h2 === HASH_T2) {
+            esAdmin = true;
+            document.getElementById('header').classList.add('admin-mode');
+            document.getElementById('titulo-pagina').innerText = "Modo Administrador";
+        }
+
         document.getElementById('info').innerText = "Torneo: " + idTorneo;
         cargarDatos();
     }
 
     async function cargarDatos() {
         try {
+            // 1. Jugadores
             const { data: dataJ } = await _supabase.from('jugadores').select('*').eq('id_torneo', idTorneo);
             const divJ = document.getElementById('lista-jugadores');
             divJ.innerHTML = "";
@@ -224,54 +151,68 @@
                 divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
             });
 
+            // 2. Partidos
             const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo);
             cachePartidos = dataP || [];
+            
             const divP = document.getElementById('lista-partidos');
+            const selectP = document.getElementById('id_partido');
+            
             divP.innerHTML = "";
+            selectP.innerHTML = '<option value="">--- Seleccionar partido ---</option>';
             
             cachePartidos.forEach(p => {
                 const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
                 const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
+                
                 const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0");
-                const scoreDisplay = scores.length > 0 
+                const tieneResultado = scores.length > 0;
+                
+                // Mostrar en la lista lateral
+                const scoreDisplay = tieneResultado 
                     ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` 
-                    : '<span class="score-preview" style="color:#bbb">Sin resultado</span>';
-
+                    : '<span class="score-preview" style="color:#bbb">Pendiente</span>';
                 divP.innerHTML += `<div class="match-item"><b>${p.id_partido}:</b> ${n1} vs ${n2}${scoreDisplay}</div>`;
+
+                // LÓGICA DESPLEGABLE:
+                // Si es admin: muestra todos.
+                // Si es usuario: solo muestra si NO tiene resultado.
+                if (esAdmin || !tieneResultado) {
+                    const opt = document.createElement('option');
+                    opt.value = p.id_partido;
+                    opt.innerText = `${p.id_partido}: ${n1} vs ${n2}`;
+                    selectP.appendChild(opt);
+                }
             });
-        } catch (e) { console.error("Error:", e); }
+
+            if (selectP.options.length === 1 && !esAdmin) {
+                selectP.innerHTML = '<option value="">✅ Todos los partidos completados</option>';
+                document.getElementById('btn-enviar').disabled = true;
+            }
+
+        } catch (e) { console.error(e); }
     }
 
     document.getElementById('form-resultado').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
-        const idPInput = document.getElementById('id_partido').value.trim().toUpperCase();
-        const partido = cachePartidos.find(p => p.id_partido.toUpperCase() === idPInput);
+        const idPSelected = document.getElementById('id_partido').value;
         
-        if (!partido) return alert("El código de partido no existe.");
+        if (!idPSelected) return alert("Por favor, selecciona un partido.");
+        const partido = cachePartidos.find(p => p.id_partido === idPSelected);
 
         const games = [];
         let hayHuecoVacio = false;
 
         for(let i=1; i<=5; i++) {
             let val = document.getElementById('g'+i).value.trim();
-            
             if (val === "") {
                 hayHuecoVacio = true;
                 games.push("0-0");
             } else {
-                // Si ya encontramos un hueco vacío antes, este no es consecutivo
-                if (hayHuecoVacio) {
-                    return alert(`No puedes saltarte el Set ${i-1}. Debes rellenar los sets de forma consecutiva.`);
-                }
-
-                // Extraer solo los números
+                if (hayHuecoVacio) return alert(`Rellena los sets de forma consecutiva (falta el Set ${i-1}).`);
                 const numeros = val.match(/\d+/g);
-                if (!numeros || numeros.length !== 2) {
-                    return alert(`El Set ${i} debe tener exactamente dos números (ej: 11-5).`);
-                }
-
-                // Guardar normalizado con guion
+                if (!numeros || numeros.length !== 2) return alert(`El Set ${i} debe tener 2 números (ej: 11-5).`);
                 games.push(`${numeros[0]}-${numeros[1]}`);
             }
         }
