@@ -26,11 +26,10 @@
         #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
         .info-panel { margin-bottom: 20px; }
-        .list-box { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; max-height: 250px; overflow-y: auto; font-size: 0.85rem; width: 100%; box-sizing: border-box; }
+        .list-box { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; max-height: 200px; overflow-y: auto; font-size: 0.85rem; width: 100%; box-sizing: border-box; }
         .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; z-index: 10; }
 
-        .match-item { padding: 10px 0; border-bottom: 1px solid #f1f1f1; }
-        .match-group-label { font-size: 0.7rem; color: #999; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px; }
+        .match-item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .score-preview { display: block; color: var(--accent); font-family: monospace; font-weight: bold; margin-top: 3px; font-size: 0.8rem; }
         .match-divider { font-weight: bold; color: #444; font-size: 0.8rem; text-transform: uppercase; background: #eee; padding: 6px 10px; border-radius: 6px; margin: 15px 0 8px 0; }
 
@@ -70,9 +69,16 @@
     <div class="form-card">
         <form id="form-resultado">
             <div class="form-group">
-                <label>Seleccionar Partido:</label>
-                <select id="id_partido" required>
-                    <option value="">Cargando partidos...</option>
+                <label>Selecciona tu nombre:</label>
+                <select id="select_jugador_1" required>
+                    <option value="">Cargando jugadores...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Selecciona a tu oponente:</label>
+                <select id="select_jugador_2" required disabled>
+                    <option value="">Primero selecciona un jugador</option>
                 </select>
             </div>
 
@@ -88,7 +94,7 @@
                 </div>
             </div>
 
-            <button type="submit" id="btn-enviar">GUARDAR RESULTADO</button>
+            <button type="submit" id="btn-enviar" disabled>GUARDAR RESULTADO</button>
         </form>
     </div>
 
@@ -148,69 +154,43 @@
 
     async function cargarDatos() {
         try {
-            // 1. Cargar Jugadores
             const { data: dataJ } = await _supabase.from('jugadores').select('*').eq('id_torneo', idTorneo);
             (dataJ || []).forEach(j => cacheJugadores[j.id_jugador] = j.nombre_jugador);
 
-            // 2. Cargar Partidos
             const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo);
             cachePartidos = dataP || [];
             
-            const divP = document.getElementById('lista-partidos');
-            const selectP = document.getElementById('id_partido');
-            divP.innerHTML = "";
-            selectP.innerHTML = '<option value="">--- Seleccionar partido ---</option>';
-
-            // Lógica de separación: Finalizados vs Pendientes
-            const jugados = cachePartidos.filter(p => [p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
-            const pendientes = cachePartidos.filter(p => ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
-
-            // Función de ordenamiento compleja:
-            // 1. Grupo (tipo_partido) alfabéticamente.
-            // 2. Nombre Jugador 1 - Nombre Jugador 2 alfabéticamente.
-            const sortMatches = (a, b) => {
-                if (a.tipo_partido !== b.tipo_partido) {
-                    return a.tipo_partido.localeCompare(b.tipo_partido);
-                }
-                const nombreA = `${cacheJugadores[a.id_jugador1]} - ${cacheJugadores[a.id_jugador2]}`;
-                const nombreB = `${cacheJugadores[b.id_jugador1]} - ${cacheJugadores[b.id_jugador2]}`;
-                return nombreA.localeCompare(nombreB);
-            };
-
-            jugados.sort(sortMatches);
-            pendientes.sort(sortMatches);
-
-            // Renderizado de lista lateral
-            if (jugados.length > 0) {
-                divP.innerHTML += '<div class="match-divider">Finalizados</div>';
-                jugados.forEach(p => divP.innerHTML += renderRow(p, true));
-            }
-            if (pendientes.length > 0) {
-                divP.innerHTML += '<div class="match-divider">Pendientes</div>';
-                pendientes.forEach(p => divP.innerHTML += renderRow(p, false));
-            }
-
-            // Rellenar Select (Dropdown)
-            const listadoParaSelect = esAdmin ? [...jugados, ...pendientes] : pendientes;
-            // Si es admin, re-ordenamos toda la lista para el select para que sea fácil encontrar por nombre
-            if (esAdmin) listadoParaSelect.sort(sortMatches);
-
-            listadoParaSelect.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id_partido; // El valor interno sigue siendo el ID para Supabase
-                const n1 = cacheJugadores[p.id_jugador1] || 'J'+p.id_jugador1;
-                const n2 = cacheJugadores[p.id_jugador2] || 'J'+p.id_jugador2;
-                // Texto visible SIN el id_partido
-                opt.innerText = `${p.tipo_partido}: ${n1} vs ${n2}`;
-                selectP.appendChild(opt);
-            });
-
-            if (selectP.options.length === 1 && !esAdmin) {
-                selectP.innerHTML = '<option value="">✅ Todos los partidos finalizados</option>';
-                document.getElementById('btn-enviar').disabled = true;
-            }
+            actualizarListaLateral();
+            actualizarDesplegableJugador1();
 
         } catch (e) { console.error(e); }
+    }
+
+    function actualizarListaLateral() {
+        const divP = document.getElementById('lista-partidos');
+        divP.innerHTML = "";
+
+        const jugados = cachePartidos.filter(p => [p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
+        const pendientes = cachePartidos.filter(p => ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
+
+        const sortMatches = (a, b) => {
+            if (a.tipo_partido !== b.tipo_partido) return a.tipo_partido.localeCompare(b.tipo_partido);
+            const nombreA = `${cacheJugadores[a.id_jugador1]} - ${cacheJugadores[a.id_jugador2]}`;
+            const nombreB = `${cacheJugadores[b.id_jugador1]} - ${cacheJugadores[b.id_jugador2]}`;
+            return nombreA.localeCompare(nombreB);
+        };
+
+        jugados.sort(sortMatches);
+        pendientes.sort(sortMatches);
+
+        if (jugados.length > 0) {
+            divP.innerHTML += '<div class="match-divider">Finalizados</div>';
+            jugados.forEach(p => divP.innerHTML += renderRow(p, true));
+        }
+        if (pendientes.length > 0) {
+            divP.innerHTML += '<div class="match-divider">Pendientes</div>';
+            pendientes.forEach(p => divP.innerHTML += renderRow(p, false));
+        }
     }
 
     function renderRow(p, done) {
@@ -218,14 +198,86 @@
         const n2 = cacheJugadores[p.id_jugador2] || 'J'+p.id_jugador2;
         const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0");
         const resText = done ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` : '<span class="score-preview" style="color:#bbb">Pendiente</span>';
-        
-        return `
-            <div class="match-item">
-                <span class="match-group-label">${p.tipo_partido}</span>
-                <strong>${n1}</strong> vs <strong>${n2}</strong>
-                ${resText}
-            </div>`;
+        return `<div class="match-item"><span style="font-size:0.7rem; color:#999;">${p.tipo_partido}</span><br><strong>${n1}</strong> vs <strong>${n2}</strong>${resText}</div>`;
     }
+
+    // --- LÓGICA DE DESPLEGABLES ---
+
+    function actualizarDesplegableJugador1() {
+        const select1 = document.getElementById('select_jugador_1');
+        select1.innerHTML = '<option value="">--- Selecciona tu nombre ---</option>';
+
+        // Obtener IDs únicos de jugadores que tienen algún partido elegible (pendiente o todos si es admin)
+        const idsInvolucrados = new Set();
+        cachePartidos.forEach(p => {
+            const esPendiente = ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0");
+            if (esAdmin || esPendiente) {
+                idsInvolucrados.add(p.id_jugador1);
+                idsInvolucrados.add(p.id_jugador2);
+            }
+        });
+
+        // Convertir IDs a lista de nombres y ordenar
+        const listaJugadores = Array.from(idsInvolucrados).map(id => ({
+            id: id,
+            nombre: cacheJugadores[id] || 'J' + id
+        })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        listaJugadores.forEach(j => {
+            const opt = document.createElement('option');
+            opt.value = j.id;
+            opt.innerText = j.nombre;
+            select1.appendChild(opt);
+        });
+    }
+
+    document.getElementById('select_jugador_1').addEventListener('change', function() {
+        const idSel = parseInt(this.value);
+        const select2 = document.getElementById('select_jugador_2');
+        const btn = document.getElementById('btn-enviar');
+        
+        select2.innerHTML = '<option value="">--- Selecciona oponente ---</option>';
+        select2.disabled = !idSel;
+        btn.disabled = true;
+
+        if (!idSel) return;
+
+        // Buscar partidos donde participe el jugador seleccionado
+        const oponentes = [];
+        cachePartidos.forEach(p => {
+            const esPendiente = ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0");
+            
+            if (esAdmin || esPendiente) {
+                let idOponente = null;
+                if (p.id_jugador1 === idSel) idOponente = p.id_jugador2;
+                else if (p.id_jugador2 === idSel) idOponente = p.id_jugador1;
+
+                if (idOponente !== null) {
+                    oponentes.push({
+                        idMatch: p.id_partido,
+                        idOponente: idOponente,
+                        nombreOponente: cacheJugadores[idOponente] || 'J' + idOponente,
+                        grupo: p.tipo_partido
+                    });
+                }
+            }
+        });
+
+        oponentes.sort((a, b) => a.nombreOponente.localeCompare(b.nombreOponente));
+
+        oponentes.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.idMatch; // Guardamos el ID del partido como valor
+            opt.innerText = `${o.nombreOponente} (${o.grupo})`;
+            select2.appendChild(opt);
+        });
+    });
+
+    document.getElementById('select_jugador_2').addEventListener('change', function() {
+        document.getElementById('btn-enviar').disabled = !this.value;
+    });
+
+    // --- ACCIONES ---
 
     async function desbloquearAdmin() {
         const clave = document.getElementById('admin_key').value;
@@ -241,8 +293,7 @@
     document.getElementById('form-resultado').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
-        const idPSelected = document.getElementById('id_partido').value;
-        if (!idPSelected) return alert("Selecciona un partido.");
+        const idPSelected = document.getElementById('select_jugador_2').value;
         
         const partido = cachePartidos.find(p => p.id_partido === idPSelected);
         const games = [];
