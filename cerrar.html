@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Cierre - Supabase</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -86,7 +87,6 @@
         const { data: jgs } = await _supabase.from('jugadores').select('*').eq('id_torneo', idT);
         console.log("Jugadores inscritos:", jgs, "en torneo", idT);
         jugadores = jgs || [];
-        console.log("Jugadores inscritos:", jugadores);
         document.getElementById('lista-jugadores').innerText = jugadores.length + " jugadores inscritos.";
     }
 
