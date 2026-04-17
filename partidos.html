@@ -152,7 +152,7 @@
             });
 
             // 2. Partidos
-            const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo);
+            const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo).order('id_partido', { ascending: true });
             cachePartidos = dataP || [];
             
             const divP = document.getElementById('lista-partidos');
