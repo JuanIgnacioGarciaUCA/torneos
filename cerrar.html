@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cierre - Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #fff3e0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: #e65100; text-align: center; }
+        .card-torneo { background: #fff8f1; border: 1px solid #ffe0b2; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .aviso { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; }
+        select, input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background: #ef6c00; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #ccc; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Gestión de cierre de inscripciones</h2>
+    <div class="card-torneo">
+        <h3 id="t-nombre">Cargando...</h3>
+        <p id="t-fecha"></p>
+    </div>
+    <div id="aviso-cerrado" class="aviso hidden">⚠️ TORNEO CERRADO</div>
+    
+    <div id="lista-jugadores" style="font-size: 0.8em; margin: 10px 0;"></div>
+
+    <label>Formato:</label>
+    <select id="tipo">
+        <option value="Grupos">Grupos</option>
+        <option value="Liga">Liga Única</option>
+    </select>
+    <label>Nº Grupos:</label>
+    <input type="number" id="num_grupos" value="2" min="1">
+    <button id="btn-cerrar">CERRAR Y GENERAR PARTIDOS</button>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+
+    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; // "https://tu-proyecto.supabase.co"; 
+    const SUPABASE_KEY = params.get('key') || "";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const HASH1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+    const HASH2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7";
+
+    const t1 = params.get('token') || "";
+    const t2 = params.get('token2') || "";
+    const idT = params.get('id_torneo');
+
+    let jugadores = [];
+
+    async function sha256(txt) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function validar() {
+        if (await sha256(t1) === HASH1 && await sha256(t2) === HASH2) {
+            cargarDatos();
+        } else {
+            document.body.innerHTML = "<h1>No autorizado</h1>";
+        }
+    }
+
+    async function cargarDatos() {
+        // Info Torneo
+        const { data: torneos } = await _supabase.from('listatorneos').select('*').eq('id_torneo', idT);
+        if (torneos.length > 0) {
+            document.getElementById('t-nombre').innerText = torneos[0].nombre_torneo;
+            document.getElementById('t-fecha').innerText = torneos[0].fechahora_torneo;
+        }
+
+        // Check si hay partidos
+        const { data: partidos } = await _supabase.from('lista_partidos').select('id').eq('id_torneo', idT).limit(1);
+        if (partidos.length > 0) {
+            document.getElementById('aviso-cerrado').classList.remove('hidden');
+            document.getElementById('btn-cerrar').disabled = true;
+        }
+
+        // Cargar Jugadores
+        const { data: jgs } = await _supabase.from('jugadores').select('*').eq('id_torneo', idT);
+        jugadores = jgs || [];
+        document.getElementById('lista-jugadores').innerText = jugadores.length + " jugadores inscritos.";
+    }
+
+    document.getElementById('btn-cerrar').addEventListener('click', async () => {
+        if (jugadores.length < 2) return alert("Mínimo 2 jugadores.");
+        
+        const btn = document.getElementById('btn-cerrar');
+        btn.disabled = true;
+
+        const tipo = document.getElementById('tipo').value;
+        const nGrupos = parseInt(document.getElementById('num_grupos').value);
+
+        // 1. Actualizar listatorneos
+        await _supabase.from('listatorneos').update({ tipo_torneo: tipo, max_num_grupos: nGrupos }).eq('id_torneo', idT);
+
+        // 2. Lógica de grupos y partidos
+        const nivVal = { "Pro": 4, "Avanzado": 3, "Intermedio": 2, "Principiante": 1 };
+        jugadores.sort((a, b) => (nivVal[b.nivel] || 0) - (nivVal[a.nivel] || 0));
+
+        let grupos = Array.from({ length: nGrupos }, () => []);
+        let reverse = false, g = 0;
+        jugadores.forEach(j => {
+            grupos[g].push(j);
+            if (!reverse) { g++; if (g === nGrupos) { g = nGrupos - 1; reverse = true; } }
+            else { g--; if (g === -1) { g = 0; reverse = false; } }
+        });
+
+        let partidosInsertar = [];
+        grupos.forEach((grupo, idxG) => {
+            let pCount = 1;
+            for (let i = 0; i < grupo.length; i++) {
+                for (let j = i + 1; j < grupo.length; j++) {
+                    partidosInsertar.push({
+                        id_torneo: idT,
+                        id_partido: `G${idxG + 1}-P${pCount++}`,
+                        tipo_partido: nGrupos > 1 ? `Grupo ${idxG + 1}` : "Liga Única",
+                        id_jugador1: grupo[i].id_jugador,
+                        id_jugador2: grupo[j].id_jugador
+                    });
+                }
+            }
+        });
+
+        // 3. Insertar todos los partidos
+        const { error } = await _supabase.from('lista_partidos').insert(partidosInsertar);
+
+        if (error) alert("Error: " + error.message);
+        else {
+            alert("Torneo cerrado y partidos generados.");
+            location.reload();
+        }
+    });
+
+    validar();
+</script>
+</body>
+</html>

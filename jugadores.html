@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripción - Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { color: #1a73e8; text-align: center; margin: 0 0 15px 0; }
+        .info-torneo { background: #e8f0fe; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 0.9em; }
+        form { display: flex; flex-direction: column; gap: 12px; }
+        label { font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: -8px; }
+        input, select, button { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
+        input[readonly] { background-color: #e9ecef; cursor: not-allowed; font-weight: bold; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:disabled { background-color: #ccc; }
+        .cerrado-msg { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
+        .jugador-item { background: #f8f9fa; padding: 10px; margin-top: 5px; border-radius: 4px; display: flex; justify-content: space-between; border-left: 4px solid #1a73e8; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="contenido">
+        <h2>Inscribir Jugador</h2>
+        <div id="info" class="info-torneo">Sincronizando...</div>
+        <div id="mensaje-cerrado" class="cerrado-msg hidden">🚫 Inscripciones cerradas.</div>
+
+        <form id="form-jugador">
+            <label>ID Jugador:</label>
+            <input type="text" id="id_jugador" readonly value="Calculando...">
+            <label>Nombre:</label>
+            <input type="text" id="nombre_jugador" required>
+            <label>Nivel:</label>
+            <select id="nivel_jugador">
+                <option value="Principiante">Principiante</option>
+                <option value="Intermedio">Intermedio</option>
+                <option value="Avanzado">Avanzado</option>
+                <option value="Pro">Pro</option>
+            </select>
+            <button type="submit" id="btn-enviar">CONFIRMAR INSCRIPCIÓN</button>
+        </form>
+
+        <div style="margin-top:20px;">
+            <h3>Inscritos</h3>
+            <div id="lista-jugadores"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+
+    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; // "https://tu-proyecto.supabase.co"; 
+    const SUPABASE_KEY = params.get('key') || "";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const HASH_REQ = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+
+    const token = params.get('token') || "";
+    const idT = params.get('id_torneo');
+
+    async function sha256(txt) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function validar() {
+        if (await sha256(token) !== HASH_REQ || !idT) {
+            document.body.innerHTML = "<h1>No autorizado</h1>";
+            return;
+        }
+        document.getElementById('info').innerText = "Torneo: " + idT;
+        checkStatus();
+    }
+
+    async function checkStatus() {
+        // Ver si hay partidos (Cerrado)
+        const { data: partidos } = await _supabase.from('lista_partidos').select('id_partido').eq('id_torneo', idT).limit(1);
+        if (partidos && partidos.length > 0) {
+            document.getElementById('form-jugador').classList.add('hidden');
+            document.getElementById('mensaje-cerrado').classList.remove('hidden');
+        }
+
+        // Cargar jugadores y calcular ID
+        const { data: inscritos } = await _supabase.from('jugadores').select('*').eq('id_torneo', idT).order('id_jugador', { ascending: true });
+        
+        const listaDiv = document.getElementById('lista-jugadores');
+        listaDiv.innerHTML = "";
+        let maxId = 0;
+
+        inscritos.forEach(j => {
+            if (j.id_jugador > maxId) maxId = j.id_jugador;
+            listaDiv.innerHTML += `<div class="jugador-item"><span>#${j.id_jugador} <b>${j.nombre_jugador}</b></span> <span>${j.nivel}</span></div>`;
+        });
+
+        document.getElementById('id_jugador').value = maxId + 1;
+    }
+
+    document.getElementById('form-jugador').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-enviar');
+        btn.disabled = true;
+
+        const { error } = await _supabase.from('jugadores').insert([{
+            id_torneo: idT,
+            id_jugador: parseInt(document.getElementById('id_jugador').value),
+            nombre_jugador: document.getElementById('nombre_jugador').value,
+            nivel: document.getElementById('nivel_jugador').value
+        }]);
+
+        if (error) alert("Error: " + error.message);
+        else location.reload();
+    });
+
+    validar();
+</script>
+</body>
+</html>
