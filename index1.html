@@ -60,11 +60,8 @@
 
 <script>
     const params = new URLSearchParams(window.location.search);
-
     // --- CONFIGURACIÓN SUPABASE ---
     const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; // "https://tu-proyecto.supabase.co"; 
-    //"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYnBtamdiY3ljeXhkdWJtcW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjcxNTksImV4cCI6MjA5MTk0MzE1OX0.Pe4qVDRM3bP1BobROD2YSdfN1_tvEK7-D39BPALA0YI";  //"tu-anon-key-aqui";
-    // https://juanignaciogarciauca.github.io/torneos/?token=torneos_jigg&token2=admin1&key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYnBtamdiY3ljeXhkdWJtcW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjcxNTksImV4cCI6MjA5MTk0MzE1OX0.Pe4qVDRM3bP1BobROD2YSdfN1_tvEK7-D39BPALA0YI
     const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
