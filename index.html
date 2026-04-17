@@ -58,15 +58,18 @@
 </div>
 
 <script>
+    const params = new URLSearchParams(window.location.search);
+
     // --- CONFIGURACIÓN SUPABASE ---
     const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; // "https://tu-proyecto.supabase.co"; 
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYnBtamdiY3ljeXhkdWJtcW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjcxNTksImV4cCI6MjA5MTk0MzE1OX0.Pe4qVDRM3bP1BobROD2YSdfN1_tvEK7-D39BPALA0YI";  //"tu-anon-key-aqui";
+    //"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYnBtamdiY3ljeXhkdWJtcW51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjcxNTksImV4cCI6MjA5MTk0MzE1OX0.Pe4qVDRM3bP1BobROD2YSdfN1_tvEK7-D39BPALA0YI";  //"tu-anon-key-aqui";
+    const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const HASH1 = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1"; // torneos_jigg
     const HASH2 = "25f43b1486ad95a1398e3eeb3d83bc4010015fcc9bedb35b432e00298d5021f7"; // admin1
 
-    const params = new URLSearchParams(window.location.search);
+    
     const t1 = params.get('token') || "";
     const t2 = params.get('token2') || "";
 
