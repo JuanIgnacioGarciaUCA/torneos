@@ -130,10 +130,10 @@
         const base = window.location.href.split('?')[0].replace('index.html', '');
         
         const urls = [
-            { t: "INSCRIPCIÓN", u: `${base}jugadores.html?token=${t1}&id_torneo=${idT}` },
-            { t: "RESULTADOS", u: `${base}partidos.html?token=${t1}&id_torneo=${idT}` },
-            { t: "CERRAR", u: `${base}cerrar.html?token=${t1}&token2=${t2}&id_torneo=${idT}` },
-            { t: "REVISIÓN", u: `${base}revisiontorneo.html?token=${t1}&id_torneo=${idT}` }
+            { t: "INSCRIPCIÓN", u: `${base}jugadores.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}` },
+            { t: "RESULTADOS", u: `${base}partidos.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}` },
+            { t: "CERRAR", u: `${base}cerrar.html?token=${t1}&token2=${t2}&id_torneo=${idT}&key=${SUPABASE_KEY}` },
+            { t: "REVISIÓN", u: `${base}revisiontorneo.html?token=${t1}&id_torneo=${idT}&key=${SUPABASE_KEY}` }
         ];
 
         const contenedor = document.getElementById('contenedor-qrs');
