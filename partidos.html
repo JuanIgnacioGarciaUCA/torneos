@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Resultados - Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #d93025;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --text: #3c4043;
+            --accent: #1a73e8;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            margin: 0; 
+            display: flex; 
+            justify-content: center;
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 500px; 
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .header-card {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(217, 48, 37, 0.2);
+        }
+
+        h2 { margin: 0; font-size: 1.4rem; }
+        #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
+
+        /* Paneles de información (Deslizar en móvil) */
+        .info-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto; 
+            padding-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .list-box {
+            flex: 0 0 85%; 
+            background: var(--card);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            max-height: 220px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+
+        .list-box h4 { 
+            margin: 0 0 8px 0; 
+            color: var(--primary); 
+            border-bottom: 1px solid #fce8e6; 
+            padding-bottom: 5px; 
+            position: sticky; 
+            top: 0; 
+            background: white; 
+            z-index: 1;
+        }
+
+        .match-item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
+        .score-preview {
+            display: block;
+            color: var(--accent);
+            font-family: monospace;
+            font-weight: bold;
+            margin-top: 3px;
+            font-size: 0.8rem;
+        }
+
+        /* Formulario */
+        .form-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+        }
+
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 16px; 
+            box-sizing: border-box;
+        }
+
+        input:focus { border-color: var(--primary); outline: none; }
+
+        .id-input { 
+            font-family: 'Courier New', monospace; 
+            text-transform: uppercase; 
+            background: #fffde7;
+            font-weight: bold;
+        }
+
+        .games-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px;
+        }
+
+        .help-text { font-size: 0.75rem; color: #70757a; margin-bottom: 10px; display: block; }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:disabled { background-color: #dadce0; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="main-view">
+    <div class="header-card">
+        <h2>Registrar Resultado</h2>
+        <div id="info">Sincronizando...</div>
+    </div>
+
+    <!-- Paneles superiores -->
+    <div class="info-panel">
+        <div class="list-box">
+            <h4>📅 Partidos y Resultados</h4>
+            <div id="lista-partidos">Cargando...</div>
+        </div>
+        <div class="list-box">
+            <h4>🏓 Jugadores</h4>
+            <div id="lista-jugadores">Cargando...</div>
+        </div>
+    </div>
+
+    <!-- Formulario de entrada -->
+    <div class="form-card">
+        <form id="form-resultado">
+            <div class="form-group">
+                <label>Código del Partido:</label>
+                <input type="text" id="id_partido" class="id-input" placeholder="Ej: G1-P1" required>
+            </div>
+
+            <div class="form-group">
+                <label>Resultados por Set:</label>
+                <span class="help-text">Formato: "11-5", "11 9" (nº separador nº)</span>
+                <div class="games-container">
+                    <input type="text" id="g1" placeholder="Set 1">
+                    <input type="text" id="g2" placeholder="Set 2">
+                    <input type="text" id="g3" placeholder="Set 3">
+                    <input type="text" id="g4" placeholder="Set 4">
+                    <input type="text" id="g5" placeholder="Set 5">
+                </div>
+            </div>
+
+            <button type="submit" id="btn-enviar">GUARDAR RESULTADO</button>
+        </form>
+    </div>
+</div>
+
+<div id="error-auth" class="hidden" style="text-align:center; padding:50px; color:red;">
+    <h3>⚠️ Acceso Denegado</h3>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    
+    // Configuración Supabase
+    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; 
+    const SUPABASE_KEY = params.get('key') || "";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const HASH_REQUERIDO = "70955ed78d3cff207c71067386bf9a430cd93c8c98af7dde474f38d50383aac1";
+    const token = params.get('token') || "";
+    const idTorneo = params.get('id_torneo');
+
+    let cachePartidos = [];
+    let cacheJugadores = {};
+
+    async function sha256(txt) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function iniciar() {
+        if (await sha256(token) !== HASH_REQUERIDO || !idTorneo) {
+            document.getElementById('main-view').classList.add('hidden');
+            document.getElementById('error-auth').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('info').innerText = "Torneo: " + idTorneo;
+        cargarDatos();
+    }
+
+    async function cargarDatos() {
+        try {
+            // 1. Obtener Jugadores
+            const { data: dataJ } = await _supabase.from('jugadores').select('*').eq('id_torneo', idTorneo);
+            const divJ = document.getElementById('lista-jugadores');
+            divJ.innerHTML = "";
+            (dataJ || []).forEach(j => {
+                cacheJugadores[j.id_jugador] = j.nombre_jugador;
+                divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
+            });
+
+            // 2. Obtener Partidos
+            const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo);
+            cachePartidos = dataP || [];
+            const divP = document.getElementById('lista-partidos');
+            divP.innerHTML = "";
+            
+            cachePartidos.forEach(p => {
+                const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
+                const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
+                
+                const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0" && s !== "0");
+                const scoreDisplay = scores.length > 0 
+                    ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` 
+                    : '<span class="score-preview" style="color:#bbb">Sin resultado</span>';
+
+                divP.innerHTML += `
+                    <div class="match-item">
+                        <b>${p.id_partido}:</b> ${n1} vs ${n2}
+                        ${scoreDisplay}
+                    </div>`;
+            });
+        } catch (e) { console.error("Error cargando datos:", e); }
+    }
+
+    document.getElementById('form-resultado').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-enviar');
+        const idPInput = document.getElementById('id_partido').value.trim().toUpperCase();
+        
+        // Buscar el partido en la caché para asegurar que existe y obtener sus datos originales
+        const partido = cachePartidos.find(p => p.id_partido.toUpperCase() === idPInput);
+        if (!partido) return alert("El código de partido no existe en este torneo.");
+
+        // Validación de formato (Dígito - Separador - Dígito)
+        const regexFormat = /^\d+\D\d+$/;
+        const games = [];
+        for(let i=1; i<=5; i++) {
+            let val = document.getElementById('g'+i).value.trim();
+            if (val !== "" && !regexFormat.test(val)) return alert(`Formato de Set ${i} incorrecto (ej: 11-5)`);
+            games.push(val || "0-0");
+        }
+
+        btn.disabled = true;
+        btn.innerText = "GUARDANDO...";
+
+        // Usamos upsert de Supabase. Al tener id_torneo e id_partido como PRIMARY KEY, actualizará la fila.
+        const { error } = await _supabase.from('lista_partidos').upsert({
+            id_torneo: idTorneo,
+            id_partido: partido.id_partido,
+            tipo_partido: partido.tipo_partido,
+            id_jugador1: partido.id_jugador1,
+            id_jugador2: partido.id_jugador2,
+            g1: games[0],
+            g2: games[1],
+            g3: games[2],
+            g4: games[3],
+            g5: games[4],
+            log: new Date().toISOString()
+        });
+
+        if (error) {
+            alert("Error al guardar: " + error.message);
+            btn.disabled = false;
+            btn.innerText = "GUARDAR RESULTADO";
+        } else {
+            alert("✅ Resultado guardado correctamente.");
+            location.reload(); 
+        }
+    });
+
+    iniciar();
+</script>
+</body>
+</html>
