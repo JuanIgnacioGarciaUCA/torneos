@@ -25,8 +25,9 @@
         h2 { margin: 0; font-size: 1.4rem; }
         #info { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
-        .info-panel { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
-        .list-box { flex: 0 0 85%; background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; max-height: 200px; overflow-y: auto; font-size: 0.85rem; }
+        /* Panel de información (Solo partidos ahora) */
+        .info-panel { margin-bottom: 20px; }
+        .list-box { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; max-height: 220px; overflow-y: auto; font-size: 0.85rem; width: 100%; box-sizing: border-box; }
         .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; z-index: 10; }
 
         .match-item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
@@ -59,11 +60,7 @@
     <div class="info-panel">
         <div class="list-box">
             <h4>📅 Partidos del Torneo</h4>
-            <div id="lista-partidos">Cargando...</div>
-        </div>
-        <div class="list-box">
-            <h4>🏓 Jugadores</h4>
-            <div id="lista-jugadores">Cargando...</div>
+            <div id="lista-partidos">Cargando partidos...</div>
         </div>
     </div>
 
@@ -141,13 +138,10 @@
 
     async function cargarDatos() {
         try {
-            // 1. Cargar Jugadores
+            // 1. Cargamos jugadores para tener el mapa de nombres internamente
             const { data: dataJ } = await _supabase.from('jugadores').select('*').eq('id_torneo', idTorneo);
-            const divJ = document.getElementById('lista-jugadores');
-            divJ.innerHTML = "";
             (dataJ || []).forEach(j => {
                 cacheJugadores[j.id_jugador] = j.nombre_jugador;
-                divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
             });
 
             // 2. Cargar Partidos
@@ -160,17 +154,14 @@
             divP.innerHTML = "";
             selectP.innerHTML = '<option value="">--- Seleccionar partido ---</option>';
 
-            // SEPARAR Y ORDENAR
             const jugados = cachePartidos.filter(p => [p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
             const pendientes = cachePartidos.filter(p => ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
 
-            // Función de ordenación natural (G1-P2 antes que G1-P10)
-            const sortFn = (a, b) => a.id_partido.localeCompare(b.id_partido, undefined, {numeric: true, sensitivity: 'base'});
+            const sortFn = (a, b) => a.id_partido.localeCompare(b.id_partido, undefined, {numeric: true});
             
             jugados.sort(sortFn);
             pendientes.sort(sortFn);
 
-            // RENDERIZAR LISTA LATERAL (Jugados primero, luego pendientes)
             if (jugados.length > 0) {
                 divP.innerHTML += '<div class="match-divider">Finalizados</div>';
                 jugados.forEach(p => divP.innerHTML += renderRow(p, true));
@@ -180,8 +171,7 @@
                 pendientes.forEach(p => divP.innerHTML += renderRow(p, false));
             }
 
-            // RELLENAR SELECT (Siguiendo la lógica de visibilidad)
-            const sortedAll = [...jugados, ...pendientes]; // Para que el dropdown también tenga orden
+            const sortedAll = [...jugados, ...pendientes];
             sortedAll.forEach(p => {
                 const tieneRes = [p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0");
                 if (esAdmin || !tieneRes) {
