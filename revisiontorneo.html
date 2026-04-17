@@ -8,82 +8,73 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #1a73e8; --admin: #ef6c00; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 8px; color: var(--primary); font-size: 1.1rem; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; font-size: 14px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; overflow-x: auto; }
+        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 8px; color: var(--primary); font-size: 1.2rem; margin-top: 0; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        th, td { padding: 8px; border: 1px solid #eee; text-align: center; }
-        th { background: #f8f9fa; }
-
-        /* Champion Box */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }
+        th, td { padding: 10px; border: 1px solid #eee; text-align: center; }
+        th { background: #f8f9fa; font-weight: bold; color: #555; }
+        .col-destacada { background: #f0f7ff; font-weight: bold; color: var(--primary); }
+        
         .champion-box { background: #fff7e0; border: 2px solid #fbc02d; padding: 20px; text-align: center; border-radius: 15px; margin-bottom: 20px; animation: pulse 2s infinite; }
         @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
         .champion-name { color: #f57f17; font-size: 1.6rem; font-weight: bold; }
 
-        /* Admin Panel */
         .admin-card { border: 2px solid var(--admin); background: #fff3e0; }
         .admin-card h2 { color: var(--admin); border-color: var(--admin); }
         .admin-form { display: flex; flex-direction: column; gap: 15px; margin-top: 10px; }
         
         .btn-admin { background: var(--admin); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-admin:hover { background: #e65100; }
-        .btn-admin:disabled { background: #ccc; }
-
+        
         .badge { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
         .badge-ok { background: #ceead6; color: #0d652d; }
         .badge-wait { background: #feefc3; color: #b05e00; }
-
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <!-- BLOQUE CAMPEÓN -->
     <div id="view-campeon" class="champion-box hidden">
         <span>🏆 CAMPEÓN DEL TORNEO 🏆</span><br>
         <span id="nombre-campeon" class="champion-name">---</span>
     </div>
 
-    <!-- CABECERA -->
     <div class="card">
         <h2 id="titulo-torneo">Cargando Torneo...</h2>
-        <div id="stats-resumen" style="font-size: 0.8rem; color: #666;"></div>
+        <div id="stats-resumen" style="color: #666;">Sincronizando con Supabase...</div>
     </div>
 
-    <!-- CLASIFICACIÓN -->
     <div id="zona-tablas"></div>
 
-    <!-- PANEL ADMIN (TOKEN 2) -->
     <div id="admin-panel" class="card admin-card hidden">
         <h2>🛠 Administración: Generar Fase Final</h2>
-        <div id="aviso-pendiente" style="color:red; font-size: 0.8rem; margin-bottom: 10px;">⚠️ Hay partidos pendientes en grupos.</div>
+        <div id="aviso-pendiente" style="color:red; font-size: 0.85rem; margin-bottom: 10px;">⚠️ Hay partidos de grupos pendientes.</div>
         
         <div class="admin-form">
-            <label>Jugadores que clasifican a COPA PRINCIPAL:</label>
-            <select id="num-copa">
-                <option value="0">--- Seleccionar ---</option>
-                <option value="2">2 (Final Directa)</option>
-                <option value="4">4 (Semifinales)</option>
-                <option value="8">8 (Cuartos de Final)</option>
-            </select>
-
-            <label><input type="checkbox" id="check-cons" onchange="document.getElementById('div-cons').classList.toggle('hidden')"> ¿Crear Copa de Consolación?</label>
-            
+            <div>
+                <label>Clasificados a COPA:</label>
+                <select id="num-copa">
+                    <option value="0">--- Seleccionar ---</option>
+                    <option value="2">2 (Final Directa)</option>
+                    <option value="4">4 (Semifinales)</option>
+                    <option value="8">8 (Cuartos)</option>
+                </select>
+            </div>
+            <label><input type="checkbox" id="check-cons" onchange="document.getElementById('div-cons').classList.toggle('hidden')"> ¿Copa de Consolación?</label>
             <div id="div-cons" class="hidden">
-                <label>Jugadores para CONSOLACIÓN:</label>
+                <label>Clasificados a CONSOLACIÓN:</label>
                 <select id="num-cons">
                     <option value="2">2 (Final Directa)</option>
                     <option value="4">4 (Semifinales)</option>
-                    <option value="8">8 (Cuartos de Final)</option>
+                    <option value="8">8 (Cuartos)</option>
                 </select>
             </div>
-
-            <button id="btn-generar" class="btn-admin">GENERAR CUADROS ELIMINATORIOS</button>
+            <button id="btn-generar" class="btn-admin">GENERAR CUADROS</button>
         </div>
     </div>
 
-    <!-- LISTADO DE PARTIDOS -->
     <div class="card">
         <h2>🎾 Resultados Registrados</h2>
         <div id="lista-partidos"></div>
@@ -91,8 +82,6 @@
 
 <script>
     const params = new URLSearchParams(window.location.search);
-    
-    // Configuración Supabase
     const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; 
     const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -106,7 +95,7 @@
 
     let jugadores = [];
     let partidos = [];
-    let stats = {}; // id_j -> {pts, pj, nombre}
+    let stats = {}; 
 
     async function sha256(txt) {
         if(!txt) return "";
@@ -120,12 +109,8 @@
             document.body.innerHTML = "<h1>No autorizado</h1>";
             return;
         }
-
         const h2 = await sha256(t2);
-        if (h2 === HASH_T2) {
-            document.getElementById('admin-panel').classList.remove('hidden');
-        }
-
+        if (h2 === HASH_T2) document.getElementById('admin-panel').classList.remove('hidden');
         cargarDatos();
     }
 
@@ -134,81 +119,119 @@
             const { data: torneo } = await _supabase.from('listatorneos').select('*').eq('id_torneo', idT).single();
             const { data: jgs } = await _supabase.from('jugadores').select('*').eq('id_torneo', idT);
             const { data: pts } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idT);
-
             jugadores = jgs || [];
             partidos = pts || [];
-            
             if (torneo) document.getElementById('titulo-torneo').innerText = torneo.nombre_torneo;
-            
             procesar(torneo);
         } catch (e) { console.error(e); }
     }
 
     function procesar(torneo) {
+        // Inicializar stats
         stats = {};
         const grupos = {};
         let pendientesGrupos = 0;
         let finalTerminada = false;
         let campeonID = null;
 
-        jugadores.forEach(j => stats[j.id_jugador] = {pts: 0, pj: 0, nombre: j.nombre_jugador});
+        jugadores.forEach(j => {
+            stats[j.id_jugador] = { 
+                nombre: j.nombre_jugador, mPts: 0, 
+                sW: 0, sL: 0, pW: 0, pL: 0, pj: 0 
+            };
+        });
 
         partidos.forEach(p => {
-            const tipo = p.tipo_partido.toLowerCase();
-            const esDeGrupos = tipo.includes("grupo") || tipo.includes("liga");
-            
+            const games = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(g => g && g !== "0-0");
+            const esDeGrupos = !p.tipo_partido.toLowerCase().includes("copa") && !p.tipo_partido.toLowerCase().includes("cons");
+
             if(!grupos[p.tipo_partido]) grupos[p.tipo_partido] = new Set();
             grupos[p.tipo_partido].add(p.id_jugador1);
             grupos[p.tipo_partido].add(p.id_jugador2);
 
-            let s1 = 0, s2 = 0, jugado = false;
-            [p.g1, p.g2, p.g3, p.g4, p.g5].forEach(g => {
-                if(!g || g === "0-0") return;
-                jugado = true;
+            if (games.length === 0) {
+                if (esDeGrupos) pendientesGrupos++;
+                return;
+            }
+
+            // Detectar No Presentado (W.O.)
+            let isNoShow = false;
+            let noShowWinner = 0; 
+            if (games.length === 1) {
+                const sc = games[0].split(/\D/).map(Number);
+                if (sc[0] === 12 && sc[1] === 0) { isNoShow = true; noShowWinner = 1; }
+                else if (sc[0] === 0 && sc[1] === 12) { isNoShow = true; noShowWinner = 2; }
+            }
+
+            let mSW1 = 0, mSW2 = 0, mPW1 = 0, mPW2 = 0;
+            games.forEach(g => {
                 const sc = g.split(/\D/).map(Number);
-                if(sc[0] > sc[1]) s1++; else if(sc[1] > sc[0]) s2++;
+                if (sc.length === 2) {
+                    mPW1 += sc[0]; mPW2 += sc[1];
+                    if (sc[0] > sc[1]) mSW1++; else if (sc[1] > sc[0]) mSW2++;
+                }
             });
 
-            if(jugado) {
-                stats[p.id_jugador1].pts += s1; stats[p.id_jugador1].pj++;
-                stats[p.id_jugador2].pts += s2; stats[p.id_jugador2].pj++;
-                
-                // Si es la final definitiva
-                if (p.id_partido.includes("COPA-FINAL-01")) {
-                    finalTerminada = true;
-                    campeonID = s1 > s2 ? p.id_jugador1 : p.id_jugador2;
-                }
-            } else if(esDeGrupos) {
-                pendientesGrupos++;
+            // Asignar puntos de partido (2 gana, 1 pierde, 0 no presentado)
+            if (isNoShow) {
+                if (noShowWinner === 1) { stats[p.id_jugador1].mPts += 2; stats[p.id_jugador2].mPts += 0; }
+                else { stats[p.id_jugador1].mPts += 0; stats[p.id_jugador2].mPts += 2; }
+            } else {
+                if (mSW1 > mSW2) { stats[p.id_jugador1].mPts += 2; stats[p.id_jugador2].mPts += 1; }
+                else { stats[p.id_jugador1].mPts += 1; stats[p.id_jugador2].mPts += 2; }
+            }
+
+            // Acumular Sets y Puntos Totales
+            stats[p.id_jugador1].sW += mSW1; stats[p.id_jugador1].sL += mSW2;
+            stats[p.id_jugador1].pW += mPW1; stats[p.id_jugador1].pL += mPW2;
+            stats[p.id_jugador2].sW += mSW2; stats[p.id_jugador2].sL += mSW1;
+            stats[p.id_jugador2].pW += mPW2; stats[p.id_jugador2].pL += mPW1;
+            stats[p.id_jugador1].pj++; stats[p.id_jugador2].pj++;
+
+            if (p.id_partido.includes("COPA-FINAL-01")) {
+                finalTerminada = true;
+                campeonID = mSW1 > mSW2 ? p.id_jugador1 : p.id_jugador2;
             }
         });
 
         if (pendientesGrupos === 0) document.getElementById('aviso-pendiente').classList.add('hidden');
-
         renderTablas(grupos);
         renderPartidos();
 
-        // Campeón Liga
         if (torneo?.tipo_torneo === "Liga" && pendientesGrupos === 0 && partidos.length > 0) {
-            const ranking = Object.values(stats).sort((a,b) => b.pts - a.pts);
+            const ranking = Object.keys(stats).sort((a,b) => compararJugadores(a, b));
             document.getElementById('view-campeon').classList.remove('hidden');
-            document.getElementById('nombre-campeon').innerText = ranking[0].nombre;
+            document.getElementById('nombre-campeon').innerText = stats[ranking[0]].nombre;
         } else if (finalTerminada) {
             document.getElementById('view-campeon').classList.remove('hidden');
             document.getElementById('nombre-campeon').innerText = stats[campeonID].nombre;
         }
     }
 
+    function compararJugadores(idA, idB) {
+        const a = stats[idA], b = stats[idB];
+        if (b.mPts !== a.mPts) return b.mPts - a.mPts;
+        const diffSetsA = a.sW - a.sL, diffSetsB = b.sW - b.sL;
+        if (diffSetsB !== diffSetsA) return diffSetsB - diffSetsA;
+        const diffPtsA = a.pW - a.pL, diffPtsB = b.pW - b.pL;
+        return diffPtsB - diffPtsA;
+    }
+
     function renderTablas(grupos) {
         const zona = document.getElementById('zona-tablas');
         zona.innerHTML = "";
         Object.keys(grupos).sort().forEach(gn => {
-            let h = `<div class="card"><h3>${gn}</h3><table><tr><th>Jugador</th><th>PJ</th><th>Sets</th></tr>`;
-            const sIds = Array.from(grupos[gn]).sort((a,b) => stats[b].pts - stats[a].pts);
+            let h = `<div class="card"><h2>${gn}</h2><table><thead><tr>
+                <th>Jugador</th><th>PJ</th><th class="col-destacada">Pts</th>
+                <th>J. Gan</th><th>J. Per</th><th>P. Gan</th><th>P. Per</th>
+                </tr></thead><tbody>`;
+            const sIds = Array.from(grupos[gn]).sort((a,b) => compararJugadores(a,b));
             sIds.forEach(id => {
-                h += `<tr><td>${stats[id].nombre}</td><td>${stats[id].pj}</td><td><b>${stats[id].pts}</b></td></tr>`;
+                const j = stats[id];
+                h += `<tr><td>${j.nombre}</td><td>${j.pj}</td><td class="col-destacada">${j.mPts}</td>
+                    <td>${j.sW}</td><td>${j.sL}</td><td>${j.pW}</td><td>${j.pL}</td></tr>`;
             });
-            zona.innerHTML += h + `</table></div>`;
+            zona.innerHTML += h + `</tbody></table></div>`;
         });
     }
 
@@ -217,10 +240,10 @@
         zona.innerHTML = partidos.map(p => {
             const res = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(x => x && x!=="0-0").join(" | ");
             const badge = res ? `<span class="badge badge-ok">OK</span>` : `<span class="badge badge-wait">PTE</span>`;
-            return `<div style="padding:6px; border-bottom:1px solid #eee; font-size:0.8rem;">
+            return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.85rem;">
                 ${badge} <b>${p.id_partido}</b> (${p.tipo_partido})<br>
                 ${stats[p.id_jugador1].nombre} vs ${stats[p.id_jugador2].nombre}
-                <div style="color:var(--primary); font-family:monospace;">${res}</div>
+                <div style="color:var(--primary); font-family:monospace; font-weight:bold;">${res}</div>
             </div>`;
         }).join("");
     }
@@ -229,20 +252,17 @@
         const nCopa = parseInt(document.getElementById('num-copa').value);
         const qCons = document.getElementById('check-cons').checked;
         const nCons = qCons ? parseInt(document.getElementById('num-cons').value) : 0;
+        
+        const ranking = Object.keys(stats).sort((a,b) => compararJugadores(a,b));
+        if (nCopa === 0) return alert("Selecciona clasificados.");
+        if (ranking.length < (nCopa + nCons)) return alert("No hay suficientes jugadores.");
 
-        const ranking = Object.keys(stats).map(id => ({id, pts: stats[id].pts}))
-                        .sort((a,b) => b.pts - a.pts);
-
-        if (nCopa === 0) return alert("Selecciona cuántos clasifican a la Copa.");
-        if (ranking.length < (nCopa + nCons)) return alert("No hay jugadores suficientes.");
-
-        if (!confirm("Se generarán los cuadros. ¿Continuar?")) return;
-
+        if (!confirm("Se generarán los cuadros eliminatorios. ¿Continuar?")) return;
         const btn = document.getElementById('btn-generar');
         btn.disabled = true;
 
-        async function crearCuadro(lista, prefijo) {
-            const n = lista.length;
+        async function crearCuadro(listaIds, prefijo) {
+            const n = listaIds.length;
             let matches = [];
             for (let i = 0; i < n/2; i++) {
                 const fase = n === 8 ? "CUARTOS" : (n === 4 ? "SEMIS" : "FINAL");
@@ -250,8 +270,8 @@
                     id_torneo: idT,
                     id_partido: `${prefijo}-${fase}-0${i+1}`,
                     tipo_partido: `${prefijo} ${fase}`,
-                    id_jugador1: lista[i].id,
-                    id_jugador2: lista[n-1-i].id
+                    id_jugador1: listaIds[i],
+                    id_jugador2: listaIds[n-1-i]
                 });
             }
             return _supabase.from('lista_partidos').insert(matches);
@@ -259,8 +279,8 @@
 
         await crearCuadro(ranking.slice(0, nCopa), "COPA");
         if (qCons) await crearCuadro(ranking.slice(nCopa, nCopa + nCons), "CONS");
-
-        alert("Cuadros generados.");
+        
+        alert("Cuadros generados con éxito.");
         location.reload();
     });
 
