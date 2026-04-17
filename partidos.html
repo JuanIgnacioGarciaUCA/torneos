@@ -27,16 +27,16 @@
 
         .info-panel { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
         .list-box { flex: 0 0 85%; background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid #e0e0e0; max-height: 200px; overflow-y: auto; font-size: 0.85rem; }
-        .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; }
+        .list-box h4 { margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid #fce8e6; padding-bottom: 5px; position: sticky; top: 0; background: white; z-index: 10; }
 
         .match-item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .score-preview { display: block; color: var(--accent); font-family: monospace; font-weight: bold; margin-top: 3px; font-size: 0.8rem; }
+        .match-divider { font-weight: bold; color: #666; font-size: 0.75rem; text-transform: uppercase; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; margin: 10px 0 5px 0; }
 
         .form-card { background: var(--card); padding: 20px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .form-group { margin-bottom: 18px; }
         label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
 
-        /* Estilo para el SELECT */
         select, input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; box-sizing: border-box; background: white; }
         select:focus, input:focus { border-color: var(--primary); outline: none; }
 
@@ -71,7 +71,6 @@
         <form id="form-resultado">
             <div class="form-group">
                 <label>Seleccionar Partido:</label>
-                <!-- CAMBIO: Ahora es un SELECT -->
                 <select id="id_partido" required>
                     <option value="">Cargando partidos...</option>
                 </select>
@@ -142,7 +141,7 @@
 
     async function cargarDatos() {
         try {
-            // 1. Jugadores
+            // 1. Cargar Jugadores
             const { data: dataJ } = await _supabase.from('jugadores').select('*').eq('id_torneo', idTorneo);
             const divJ = document.getElementById('lista-jugadores');
             divJ.innerHTML = "";
@@ -151,8 +150,8 @@
                 divJ.innerHTML += `<div><b>${j.id_jugador}</b> ${j.nombre_jugador}</div>`;
             });
 
-            // 2. Partidos
-            const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo).order('id_partido', { ascending: true });
+            // 2. Cargar Partidos
+            const { data: dataP } = await _supabase.from('lista_partidos').select('*').eq('id_torneo', idTorneo);
             cachePartidos = dataP || [];
             
             const divP = document.getElementById('lista-partidos');
@@ -160,60 +159,75 @@
             
             divP.innerHTML = "";
             selectP.innerHTML = '<option value="">--- Seleccionar partido ---</option>';
-            
-            cachePartidos.forEach(p => {
-                const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
-                const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
-                
-                const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0");
-                const tieneResultado = scores.length > 0;
-                
-                // Mostrar en la lista lateral
-                const scoreDisplay = tieneResultado 
-                    ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` 
-                    : '<span class="score-preview" style="color:#bbb">Pendiente</span>';
-                divP.innerHTML += `<div class="match-item"><b>${p.id_partido}:</b> ${n1} vs ${n2}${scoreDisplay}</div>`;
 
-                // LÓGICA DESPLEGABLE:
-                // Si es admin: muestra todos.
-                // Si es usuario: solo muestra si NO tiene resultado.
-                if (esAdmin || !tieneResultado) {
+            // SEPARAR Y ORDENAR
+            const jugados = cachePartidos.filter(p => [p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
+            const pendientes = cachePartidos.filter(p => ![p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0"));
+
+            // Función de ordenación natural (G1-P2 antes que G1-P10)
+            const sortFn = (a, b) => a.id_partido.localeCompare(b.id_partido, undefined, {numeric: true, sensitivity: 'base'});
+            
+            jugados.sort(sortFn);
+            pendientes.sort(sortFn);
+
+            // RENDERIZAR LISTA LATERAL (Jugados primero, luego pendientes)
+            if (jugados.length > 0) {
+                divP.innerHTML += '<div class="match-divider">Finalizados</div>';
+                jugados.forEach(p => divP.innerHTML += renderRow(p, true));
+            }
+            if (pendientes.length > 0) {
+                divP.innerHTML += '<div class="match-divider">Pendientes</div>';
+                pendientes.forEach(p => divP.innerHTML += renderRow(p, false));
+            }
+
+            // RELLENAR SELECT (Siguiendo la lógica de visibilidad)
+            const sortedAll = [...jugados, ...pendientes]; // Para que el dropdown también tenga orden
+            sortedAll.forEach(p => {
+                const tieneRes = [p.g1, p.g2, p.g3, p.g4, p.g5].some(g => g && g !== "0-0");
+                if (esAdmin || !tieneRes) {
                     const opt = document.createElement('option');
                     opt.value = p.id_partido;
+                    const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
+                    const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
                     opt.innerText = `${p.id_partido}: ${n1} vs ${n2}`;
                     selectP.appendChild(opt);
                 }
             });
 
             if (selectP.options.length === 1 && !esAdmin) {
-                selectP.innerHTML = '<option value="">✅ Todos los partidos completados</option>';
+                selectP.innerHTML = '<option value="">✅ Todos completados</option>';
                 document.getElementById('btn-enviar').disabled = true;
             }
 
         } catch (e) { console.error(e); }
     }
 
+    function renderRow(p, done) {
+        const n1 = cacheJugadores[p.id_jugador1] || p.id_jugador1;
+        const n2 = cacheJugadores[p.id_jugador2] || p.id_jugador2;
+        const scores = [p.g1, p.g2, p.g3, p.g4, p.g5].filter(s => s && s !== "0-0");
+        const resText = done ? `<span class="score-preview">R: ${scores.join(' | ')}</span>` : '<span class="score-preview" style="color:#bbb">Pendiente</span>';
+        return `<div class="match-item"><b>${p.id_partido}:</b> ${n1} vs ${n2}${resText}</div>`;
+    }
+
     document.getElementById('form-resultado').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
         const idPSelected = document.getElementById('id_partido').value;
+        if (!idPSelected) return alert("Selecciona un partido.");
         
-        if (!idPSelected) return alert("Por favor, selecciona un partido.");
         const partido = cachePartidos.find(p => p.id_partido === idPSelected);
-
         const games = [];
-        let hayHuecoVacio = false;
+        let hayVacio = false;
 
         for(let i=1; i<=5; i++) {
             let val = document.getElementById('g'+i).value.trim();
-            if (val === "") {
-                hayHuecoVacio = true;
-                games.push("0-0");
-            } else {
-                if (hayHuecoVacio) return alert(`Rellena los sets de forma consecutiva (falta el Set ${i-1}).`);
-                const numeros = val.match(/\d+/g);
-                if (!numeros || numeros.length !== 2) return alert(`El Set ${i} debe tener 2 números (ej: 11-5).`);
-                games.push(`${numeros[0]}-${numeros[1]}`);
+            if (val === "") { hayVacio = true; games.push("0-0"); }
+            else {
+                if (hayVacio) return alert(`Sigue el orden (falta Set ${i-1}).`);
+                const nums = val.match(/\d+/g);
+                if (!nums || nums.length !== 2) return alert(`Set ${i} requiere 2 números.`);
+                games.push(`${nums[0]}-${nums[1]}`);
             }
         }
 
@@ -221,22 +235,14 @@
         btn.innerText = "GUARDANDO...";
 
         const { error } = await _supabase.from('lista_partidos').upsert({
-            id_torneo: idTorneo,
-            id_partido: partido.id_partido,
-            tipo_partido: partido.tipo_partido,
-            id_jugador1: partido.id_jugador1,
-            id_jugador2: partido.id_jugador2,
+            id_torneo: idTorneo, id_partido: partido.id_partido, tipo_partido: partido.tipo_partido,
+            id_jugador1: partido.id_jugador1, id_jugador2: partido.id_jugador2,
             g1: games[0], g2: games[1], g3: games[2], g4: games[3], g5: games[4],
             log: new Date().toISOString()
         });
 
-        if (error) {
-            alert("Error: " + error.message);
-            btn.disabled = false;
-        } else {
-            alert("✅ Resultado guardado.");
-            location.reload(); 
-        }
+        if (error) { alert("Error: " + error.message); btn.disabled = false; }
+        else { alert("✅ Guardado."); location.reload(); }
     });
 
     iniciar();
