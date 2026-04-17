@@ -28,13 +28,13 @@
     <div id="contenido">
         <h2>Inscribir Jugador</h2>
         <div id="info" class="info-torneo">Sincronizando...</div>
-        <div id="mensaje-cerrado" class="cerrado-msg hidden">🚫 Inscripciones cerradas.</div>
+        <div id="mensaje-cerrado" class="cerrado-msg hidden">🚫 Las inscripciones para este torneo están cerradas (ya se generaron los partidos).</div>
 
         <form id="form-jugador">
             <label>ID Jugador:</label>
             <input type="text" id="id_jugador" readonly value="Calculando...">
             <label>Nombre:</label>
-            <input type="text" id="nombre_jugador" required>
+            <input type="text" id="nombre_jugador" placeholder="Nombre y Apellidos" required>
             <label>Nivel:</label>
             <select id="nivel_jugador">
                 <option value="Principiante">Principiante</option>
@@ -46,7 +46,7 @@
         </form>
 
         <div style="margin-top:20px;">
-            <h3>Inscritos</h3>
+            <h3>Lista de Inscritos</h3>
             <div id="lista-jugadores"></div>
         </div>
     </div>
@@ -55,7 +55,7 @@
 <script>
     const params = new URLSearchParams(window.location.search);
 
-    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; // "https://tu-proyecto.supabase.co"; 
+    const SUPABASE_URL = "https://unbpmjgbcycyxdubmqnu.supabase.co"; 
     const SUPABASE_KEY = params.get('key') || "";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -78,15 +78,16 @@
         checkStatus();
     }
 
+    // Comprobación inicial al cargar la página
     async function checkStatus() {
-        // Ver si hay partidos (Cerrado)
         const { data: partidos } = await _supabase.from('lista_partidos').select('id_partido').eq('id_torneo', idT).limit(1);
+        
         if (partidos && partidos.length > 0) {
             document.getElementById('form-jugador').classList.add('hidden');
             document.getElementById('mensaje-cerrado').classList.remove('hidden');
+            document.getElementById('id_jugador').value = "CERRADO";
         }
 
-        // Cargar jugadores y calcular ID
         const { data: inscritos } = await _supabase.from('jugadores').select('*').eq('id_torneo', idT).order('id_jugador', { ascending: true });
         
         const listaDiv = document.getElementById('lista-jugadores');
@@ -98,14 +99,31 @@
             listaDiv.innerHTML += `<div class="jugador-item"><span>#${j.id_jugador} <b>${j.nombre_jugador}</b></span> <span>${j.nivel}</span></div>`;
         });
 
-        document.getElementById('id_jugador').value = maxId + 1;
+        if (!document.getElementById('form-jugador').classList.contains('hidden')) {
+            document.getElementById('id_jugador').value = maxId + 1;
+        }
     }
 
     document.getElementById('form-jugador').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-enviar');
         btn.disabled = true;
+        btn.innerText = "Verificando estado...";
 
+        // --- COMPROBACIÓN CRÍTICA ANTES DE INSERTAR ---
+        const { data: partidosFinal } = await _supabase
+            .from('lista_partidos')
+            .select('id_partido')
+            .eq('id_torneo', idT)
+            .limit(1);
+
+        if (partidosFinal && partidosFinal.length > 0) {
+            alert("⚠️ Lo sentimos, el torneo se acaba de cerrar y ya no se aceptan más inscripciones.");
+            location.reload(); // Recarga para mostrar el mensaje de cerrado y ocultar el formulario
+            return;
+        }
+
+        // --- PROCEDER CON LA INSERCIÓN SI NO ESTÁ CERRADO ---
         const { error } = await _supabase.from('jugadores').insert([{
             id_torneo: idT,
             id_jugador: parseInt(document.getElementById('id_jugador').value),
@@ -114,9 +132,11 @@
         }]);
 
         if (error){
-            alert("Error: " + error.message + ". Inténtalo de nuevo.");
-            location.reload();
+            alert("Error al inscribir: " + error.message);
+            btn.disabled = false;
+            btn.innerText = "CONFIRMAR INSCRIPCIÓN";
         } else {
+            alert("✅ ¡Inscripción realizada con éxito!");
             location.reload();
         }
     });
